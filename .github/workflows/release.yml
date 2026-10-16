@@ -27,7 +27,10 @@ jobs:
       - name: Tag matches stampmitra.Version
         run: |
           v="$(sed -n 's/^const Version = "\(.*\)"$/\1/p' version.go)"
-          test -n "$v" && test "v$v" = "${GITHUB_REF_NAME}" || { echo "Tag ${GITHUB_REF_NAME} does not match Version v$v"; exit 1; }
+          if [ -z "$v" ] || [ "v$v" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match Version v$v"
+            exit 1
+          fi
       - run: go vet ./...
       - run: go test -race -count=1 ./...
       - run: go test -tags conformance -race -count=1 ./...
