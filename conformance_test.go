@@ -132,7 +132,14 @@ func conf(t *testing.T, opts ...Option) *confEnv {
 		t.Fatal(err)
 	}
 	_ = resp.Body.Close()
-	c, err := NewClient(testKey, append([]Option{WithBaseURL(mockURL)}, opts...)...)
+	// The SDK client gets its own transport, with keep-alives off. Sharing http.DefaultTransport with the
+	// helper calls above lets a pooled idle connection be reused; when the mock then destroys that
+	// connection, net/http transparently replays the idempotent GET on a fresh one, silently consuming a
+	// scripted "conn" step and making retry counts depend on timing (observed on GitHub runners).
+	tr := &http.Transport{DisableKeepAlives: true}
+	t.Cleanup(tr.CloseIdleConnections)
+	base := []Option{WithBaseURL(mockURL), WithHTTPClient(&http.Client{Transport: tr})}
+	c, err := NewClient(testKey, append(base, opts...)...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +284,7 @@ func prune(v any) any {
 
 func extraOf(v any) map[string]json.RawMessage {
 	rv := reflect.ValueOf(v)
-	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+	for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
 		if rv.IsNil() {
 			return nil
 		}

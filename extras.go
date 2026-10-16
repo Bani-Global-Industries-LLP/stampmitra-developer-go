@@ -14,7 +14,7 @@ var knownFieldsCache sync.Map // reflect.Type -> map[string]struct{} (lower-case
 // struct). encoding/json matches keys case-insensitively, so comparison is case-insensitive too.
 func knownFields(v any) map[string]struct{} {
 	t := reflect.TypeOf(v)
-	for t.Kind() == reflect.Ptr {
+	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	if cached, ok := knownFieldsCache.Load(t); ok {

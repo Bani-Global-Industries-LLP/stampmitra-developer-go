@@ -1,0 +1,18 @@
+# Test vectors and documentation examples only: every "key" and "whsec_" value in this repository
+# is a fake used by the unit tests, conformance suite and examples.
+title = "stampmitra-developer-go"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "fake test credentials"
+paths = [
+  '''testdata/''',
+  '''_test\.go$''',
+  '''scripts/run-examples\.sh$''',
+]
+regexes = [
+  '''sk_(test|live)_(exampleKey1234|abcdefgh12345678|envkey12345|abcdefgh_-12|EXAMPLEKEY00000000)''',
+  '''whsec_test_[0-9a-f]{16}''',
+]
