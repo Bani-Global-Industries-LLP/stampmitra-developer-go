@@ -271,6 +271,30 @@ spaces and hyphens inside identifiers are rejected, never silently removed. A fa
 `WithLogger(slog.New(...))` logs requests, responses and retries at `slog.LevelDebug`. `Authorization` and `X-API-Key` are redacted, and
 identifiers (PAN, GSTIN, account numbers, ...) and personal data (names, dates of birth, addresses) in bodies are masked. Nothing is logged by default.
 
+## Pricing
+
+The SDK is free and MIT-licensed. You pay only for successful API calls, from one prepaid wallet. Sandbox is free: mock data on every endpoint, and it never debits your wallet.
+
+Per-call rates by plan, in rupees, excluding 18% GST:
+
+| Product | Pay-as-you-go | Growth | Scale | Startup | Enterprise |
+|---|---|---|---|---|---|
+| Standard verification (PAN, GSTIN, Voter ID, Driving Licence, CIN, Udyam, cross-lookups) | ₹5 | ₹4 | ₹3.50 | ₹4 | Custom |
+| Passport and Vehicle RC | ₹9 | ₹8.50 | ₹8 | ₹8.50 | Custom |
+| Bank account (penny-drop) | ₹4 | ₹4 | ₹4 | ₹4 | Custom |
+| e-Stamp API fee (StampMitra's charge only) | ₹5 | ₹4 | ₹3 | ₹4 | Custom |
+
+| | Sandbox | Pay-as-you-go | Growth | Scale | Startup | Enterprise |
+|---|---|---|---|---|---|---|
+| Plan fee | Free | ₹0 / month | ₹999 / month | ₹4,999 / month | Free for 6 months, then 50% off for 6 | Custom |
+| Seats / API keys / webhooks | 1 / 2 / 1 | 3 / 5 / 3 | 10 / 20 / 10 | 25 / 50 / 25 | 10 / 20 / 10 | Custom |
+| Requests per minute | 20 | 60 | 300 | 1,000 | 300 | Custom |
+| Log retention | 7 days | 30 days | 90 days | 365 days | 90 days | Custom |
+| IP allowlisting | No | No | Yes | Yes | Yes | Yes |
+| White-label and custom domain | No | No | No | Yes | No | Yes |
+
+Growth and Scale are also available yearly (₹9,990 and ₹49,990, two months free). There are separate Startup and NGO programmes. Plans, rates and limits can change, and [developer.stampmitra.in/pricing](https://developer.stampmitra.in/pricing) is the source of truth; see it for how an e-Stamp order is priced in total.
+
 ## Security
 
 - Use keys server-side only and store them in environment variables or a secret manager; never commit them.
