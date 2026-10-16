@@ -273,17 +273,27 @@ identifiers (PAN, GSTIN, account numbers, ...) and personal data (names, dates o
 
 ## Pricing
 
-The SDK is free and MIT-licensed. You pay only for API calls, and only for successful production calls; Sandbox is free.
+The SDK is free and MIT-licensed. You pay only for successful API calls, from one prepaid wallet. Sandbox is free: mock data on every endpoint, and it never debits your wallet.
 
-| Plan | Rate |
-|---|---|
-| **Sandbox** (test keys, `sk_test_...`) | Free. Calls run against sandbox data and never debit your wallet. |
-| **Developer Suite** (live keys, `sk_live_...`) | ₹2 per call: PAN, GSTIN, vehicle RC, Voter ID, Driving Licence, Passport, CIN, Udyam, PAN to GSTIN, PAN to Udyam |
-| | ₹4 per call: bank account (penny-drop) |
-| | ₹5 per call: each e-Stamp call |
-| **White-label / CA fulfilment** | Custom, with volume pricing and SLAs. [Contact us](https://developer.stampmitra.in/contact). |
+Per-call rates by plan, in rupees, excluding 18% GST:
 
-Production calls are deducted from your API credit wallet (top up under Dashboard, Billing). Rates are shown for convenience and may change; the [pricing page](https://developer.stampmitra.in/pricing) is the source of truth.
+| Product | Pay-as-you-go | Growth | Scale | Startup | Enterprise |
+|---|---|---|---|---|---|
+| Standard verification (PAN, GSTIN, Voter ID, Driving Licence, CIN, Udyam, cross-lookups) | ₹5 | ₹4 | ₹3.50 | ₹4 | Custom |
+| Passport and Vehicle RC | ₹9 | ₹8.50 | ₹8 | ₹8.50 | Custom |
+| Bank account (penny-drop) | ₹4 | ₹4 | ₹4 | ₹4 | Custom |
+| e-Stamp API fee (StampMitra's charge only) | ₹5 | ₹4 | ₹3 | ₹4 | Custom |
+
+| | Sandbox | Pay-as-you-go | Growth | Scale | Startup | Enterprise |
+|---|---|---|---|---|---|---|
+| Plan fee | Free | ₹0 / month | ₹999 / month | ₹4,999 / month | Free for 6 months, then 50% off for 6 | Custom |
+| Seats / API keys / webhooks | 1 / 2 / 1 | 3 / 5 / 3 | 10 / 20 / 10 | 25 / 50 / 25 | 10 / 20 / 10 | Custom |
+| Requests per minute | 20 | 60 | 300 | 1,000 | 300 | Custom |
+| Log retention | 7 days | 30 days | 90 days | 365 days | 90 days | Custom |
+| IP allowlisting | No | No | Yes | Yes | Yes | Yes |
+| White-label and custom domain | No | No | No | Yes | No | Yes |
+
+Growth and Scale are also available yearly (₹9,990 and ₹49,990, two months free). There are separate Startup and NGO programmes. Plans, rates and limits can change, and [developer.stampmitra.in/pricing](https://developer.stampmitra.in/pricing) is the source of truth; see it for how an e-Stamp order is priced in total.
 
 ## Security
 
