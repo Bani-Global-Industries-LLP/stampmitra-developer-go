@@ -1,0 +1,18 @@
+{
+  "name": "webhook order.cancelled",
+  "event": "order.cancelled",
+  "operationId": "receiveOrderCancelled",
+  "source": "spec-example",
+  "secret": "whsec_test_0123456789abcdef",
+  "now": 1760605200,
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Webhook-Signature": "17bd31da1fbdab1964630aa98dfc7539f5310687ef76c1f61b0d51e1982f4d61",
+    "X-Webhook-Timestamp": "1760605190",
+    "X-Webhook-Event-Id": "evt_order_cancelled_01"
+  },
+  "rawBody": "{\"coreOrderId\":\"core_order_9f3a1c2b8e4d4a5f\",\"coreEventType\":\"ORDER_CANCELLED\",\"occurredAt\":\"2026-09-25T09:05:00.000Z\"}",
+  "expected": {
+    "valid": true
+  }
+}

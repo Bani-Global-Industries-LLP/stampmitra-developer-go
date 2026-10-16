@@ -1,0 +1,58 @@
+{
+  "$comment": "Shared client-side validator vectors. Patterns are copied from the backend verify DTOs (stampmitra-b2b-platform src/verify/dto). SDKs normalise with trim() + toUpperCase() before matching (bank account: trim only). `valid` entries: input -> normalized must match. `invalid` entries must NOT match even after normalisation. Maintainers: scripts/check-fixtures.mjs asserts every vector against `pattern`.",
+  "version": 1,
+  "normalization": "trim + uppercase",
+  "validators": {
+    "pan": {
+      "field": "pan", "endpoint": "POST /v1/verify/pan", "pattern": "^[A-Z]{5}[0-9]{4}[A-Z]$",
+      "valid": ["ABCDE1234F", "AAAPL1234C", "BNZPM2501F", " abcde1234f ", "ZZZZZ9999Z"],
+      "invalid": ["", "ABCDE1234", "ABCDE12345", "ABCD1234FG", "1BCDE1234F", "ABCDE1234F1", "ABCDE-1234F", "ABC DE1234F", "ÀBCDE1234F"]
+    },
+    "gstin": {
+      "field": "gstin", "endpoint": "POST /v1/verify/gstin", "pattern": "^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$",
+      "valid": ["22ABCDE1234F1Z5", "07AAAAA1111A1Z1", "27AAPFU0939F1ZV", "29AABCT1332L1ZZ", "33aabct1332l1zz"],
+      "invalid": ["", "22ABCDE1234F1Z", "22ABCDE1234F1Z55", "A2ABCDE1234F1Z5", "22ABCDE1234F0Z5", "22ABCDE1234F1X5", "22ABCDE12345Z1Z5", "22ABCDE1234F1Z!", "22 ABCDE1234F1Z5"]
+    },
+    "ifsc": {
+      "field": "ifsc", "endpoint": "POST /v1/verify/bank-account", "pattern": "^[A-Z]{4}0[A-Z0-9]{6}$",
+      "valid": ["ICIC0001234", "SBIN0000001", "HDFC0ABC123", "UTIB0000123", "kkbk0000958"],
+      "invalid": ["", "ICIC1001234", "ICIC000123", "ICIC00012345", "IC1C0001234", "ICIC0001-34", "1CIC0001234", "ICIC O001234", "ICIC0001234 X"]
+    },
+    "cin": {
+      "field": "cin", "endpoint": "POST /v1/verify/cin", "pattern": "^[LU][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$",
+      "valid": ["U74999DL2015PTC284009", "L17110MH1973PLC019786", "U72200KA2010PTC054321", "U01100TN2005PLC012345", "u74999dl2015ptc284009"],
+      "invalid": ["", "X74999DL2015PTC284009", "U74999DL2015PTC28400", "U74999DL2015PTC2840099", "U7499DDL2015PTC284009", "U74999D12015PTC284009", "U74999DL15PTC284009", "U74999DL2015PT1284009", "U74999DL2015PTC28400X"]
+    },
+    "udyam": {
+      "field": "udyamNumber", "endpoint": "POST /v1/verify/udyam", "pattern": "^UDYAM-[A-Z]{2}-[0-9]{2}-[0-9]{7}$",
+      "valid": ["UDYAM-MH-12-1234567", "UDYAM-DL-01-0000001", "UDYAM-KA-33-9999999", "UDYAM-TN-07-1020304", "udyam-gj-05-7654321"],
+      "invalid": ["", "UDYAM-MH-12-123456", "UDYAM-MH-12-12345678", "UDYAM-M1-12-1234567", "UDYAM-MH-1-1234567", "UDYAM-MH-12-123456A", "UDYAMMH121234567", "UDYOG-MH-12-1234567", "UDYAM-MHH-12-1234567"]
+    },
+    "vehicleNumber": {
+      "field": "vehicleNumber", "endpoint": "POST /v1/verify/rc", "pattern": "^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{4}$",
+      "valid": ["MH12AB1234", "DL1CAB1234", "KA05MX0001", "GJ01A1234", "mh12ab1234", "TN9Z1234"],
+      "invalid": ["", "M12AB1234", "MH12AB123", "MH12AB12345", "MH123AB1234", "MH12ABCD1234", "12MHAB1234", "MH12-AB-1234", "MH 12 AB 1234"]
+    },
+    "bankAccount": {
+      "field": "accountNumber", "endpoint": "POST /v1/verify/bank-account", "pattern": "^[0-9]{9,18}$",
+      "normalization": "trim only",
+      "valid": ["123456789", "000123456789", "1234567890123456", "123456789012345678", "9876543210"],
+      "invalid": ["", "12345678", "1234567890123456789", "12345678A", "1234-5678-9012", "1234 5678 9012", "-123456789", "123456789.0", "ABCDEFGHIJ"]
+    },
+    "passport": {
+      "field": "fileNumber", "endpoint": "POST /v1/verify/passport", "pattern": "^[A-Z]{2}[0-9]{13}$",
+      "valid": ["PA1079341954215", "DL1234567890123", "MH0000000000001", "KA9999999999999", "pa1079341954215"],
+      "invalid": ["", "PA107934195421", "PA10793419542155", "P11079341954215", "PA107934195421X", "A1079341954215", "PA-1079341954215", "1079341954215PA", "PA 1079341954215"]
+    },
+    "drivingLicense": {
+      "field": "dlNumber", "endpoint": "POST /v1/verify/driving-license", "pattern": "^[A-Z]{2}[0-9]{2}[0-9]{11}$",
+      "valid": ["MH1420110012345", "DL0420110149646", "KA0120200001234", "TN3720190000099", "mh1420110012345"],
+      "invalid": ["", "MH142011001234", "MH14201100123456", "M11420110012345", "MH14201100123AB", "MH-14-2011-0012345", "MH14 20110012345", "142011001234MH5", "MH1420110012345X"]
+    },
+    "voterId": {
+      "field": "voterId", "endpoint": "POST /v1/verify/voter-id", "pattern": "^[A-Z]{3}[0-9]{7}$",
+      "valid": ["ABC1234567", "XYZ0000001", "TLP9876543", "WWW1111111", "abc1234567"],
+      "invalid": ["", "AB1234567", "ABCD123456", "ABC123456", "ABC12345678", "ABC123456A", "123ABCDEFG", "ABC-1234567", "ABC 1234567"]
+    }
+  }
+}

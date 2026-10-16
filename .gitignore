@@ -1,0 +1,16 @@
+# binaries and test output
+*.test
+*.out
+coverage.txt
+coverage.html
+/examples/.receiver
+/examples/.receiver.log
+# editors / OS
+.idea/
+.vscode/
+.DS_Store
+*.log
+.env
+# Go workspaces are developer-local
+go.work
+go.work.sum

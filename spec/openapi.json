@@ -1,0 +1,4922 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "StampMitra Developer API",
+    "version": "1.0.0",
+    "x-api-version": "v1",
+    "summary": "Indian identity verification and e-Stamp Paper APIs for the StampMitra developer portal.",
+    "description": "The API-key Developer Suite: verification (PAN, GSTIN, vehicle RC, Voter ID, Driving Licence, Passport, CIN, Udyam, bank account), e-Stamp Paper, usage and request logs, and webhook events. Generated from the same data as the docs at https://developer.stampmitra.in.\n\nAuthentication: send your API key as `Authorization: Bearer <key>` or `x-api-key: <key>`. Sandbox keys (sk_test_) and production keys (sk_live_) use the same host; the key prefix selects the environment. Sandbox keys are free and get 20% of each endpoint's production rate limit (minimum 1 request per window); production calls are metered per successful call.\n\nErrors: every error is `{ error: { code, message, requestId } }` (plus `field` where an input is at fault). Send an `X-Request-Id` header and it is echoed back as `requestId`. See `x-error-codes`.\n\nIdempotency: send an `Idempotency-Key` header on operations that accept it (metered verification and duty/parties calls, order creation, payment intents) to make retries safe. `x-idempotent` and `x-retry-safe` mark each operation.\n\nWebhooks: outbound order events are signed. `x-webhook-signature` and the top-level `webhooks` section describe the headers and the HMAC-SHA256 construction.\n\nVersioning: Contract version (info.version) follows semantic versioning, independent of the URL version (x-api-version: v1; every path is under /v1). MAJOR: any breaking change to the published contract (removed or renamed operationId, path, field or enum value; changed status code, error shape or required-ness; a /v2 prefix). Generated SDKs bump their major version too. MINOR: backwards-compatible additions (new endpoint, new optional request field, new response field, new error code or webhook event). Clients must ignore unknown response fields and treat unknown enum values as unknown-safe. PATCH: documentation, description and example corrections that do not change behaviour.",
+    "termsOfService": "https://developer.stampmitra.in/legal/developer-terms",
+    "contact": {
+      "name": "StampMitra Developer Support",
+      "url": "https://developer.stampmitra.in/support"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api-b2b.stampmitra.in",
+      "description": "StampMitra Developer API. Sandbox and production share this host: use an sk_test_ key for sandbox (free, lower rate limits) and an sk_live_ key for production."
+    }
+  ],
+  "externalDocs": {
+    "description": "Developer documentation",
+    "url": "https://developer.stampmitra.in/docs/auth"
+  },
+  "tags": [
+    {
+      "name": "Verification"
+    },
+    {
+      "name": "e-Stamp"
+    },
+    {
+      "name": "Usage & Logs"
+    },
+    {
+      "name": "Webhooks"
+    }
+  ],
+  "x-error-codes": [
+    {
+      "code": "BAD_REQUEST",
+      "httpStatus": 400,
+      "description": "Validation failed or the request was rejected."
+    },
+    {
+      "code": "UNAUTHORIZED",
+      "httpStatus": 401,
+      "description": "Missing or invalid API key, or missing required scope."
+    },
+    {
+      "code": "PAYMENT_REQUIRED",
+      "httpStatus": 402,
+      "description": "Insufficient fulfilment wallet balance."
+    },
+    {
+      "code": "FORBIDDEN",
+      "httpStatus": 403,
+      "description": "IP not allowed, plan entitlement not enabled, or limit reached."
+    },
+    {
+      "code": "NOT_FOUND",
+      "httpStatus": 404,
+      "description": "Resource not found."
+    },
+    {
+      "code": "CONFLICT",
+      "httpStatus": 409,
+      "description": "Idempotency-Key reused with a different body, or state conflict."
+    },
+    {
+      "code": "UNPROCESSABLE_ENTITY",
+      "httpStatus": 422,
+      "description": "Request understood but cannot be processed."
+    },
+    {
+      "code": "TOO_MANY_REQUESTS",
+      "httpStatus": 429,
+      "description": "Rate limit exceeded."
+    },
+    {
+      "code": "INTERNAL_ERROR",
+      "httpStatus": 500,
+      "description": "Unexpected error, and upstream failures (502, 503). The status distinguishes them."
+    },
+    {
+      "code": "ERROR",
+      "httpStatus": 400,
+      "description": "Fallback for any other 4xx status."
+    }
+  ],
+  "x-webhook-signature": {
+    "algorithm": "HMAC-SHA256",
+    "encoding": "hex",
+    "signedPayload": "`${timestamp}.${JSON.stringify(payload)}`",
+    "secret": "The signing secret of the webhook endpoint you registered.",
+    "headers": {
+      "signature": "X-Webhook-Signature",
+      "timestamp": "X-Webhook-Timestamp",
+      "eventId": "X-Webhook-Event-Id"
+    }
+  },
+  "paths": {
+    "/v1/verify/pan": {
+      "post": {
+        "operationId": "verifyPan",
+        "summary": "Verify PAN",
+        "description": "Validates and verifies a PAN. Requires the `verification.pan.read` scope on the API key. Metered as `pan.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/pan`, including its `referenceId` field.",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PanVerifyRequest"
+              },
+              "example": {
+                "pan": "ABCDE1234F",
+                "name": "Rahul Kumar"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanVerificationResult"
+                },
+                "example": {
+                  "referenceId": "SMV-20260927-8F42K7",
+                  "pan": "ABCDE1234F",
+                  "type": "Individual",
+                  "valid": true,
+                  "registeredName": "RAHUL KUMAR",
+                  "fatherName": "SURESH KUMAR",
+                  "panStatus": "VALID",
+                  "panStatusCode": "E",
+                  "panStatusDescription": "Existing and valid PAN",
+                  "nameMatchResult": "MATCH",
+                  "nameMatchScore": "100",
+                  "aadhaarSeedingStatus": "y",
+                  "aadhaarSeedingStatusDescription": "Aadhaar linked",
+                  "lastUpdatedAt": "2023-04-01",
+                  "message": "PAN is Valid"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanVerificationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "pan must match the format ABCDE1234F",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "verification.pan.read",
+        "x-price-inr-per-successful-call": 2,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "PAN documentation",
+          "url": "https://developer.stampmitra.in/docs/verification/pan"
+        }
+      }
+    },
+    "/v1/verify/gstin": {
+      "post": {
+        "operationId": "verifyGstin",
+        "summary": "Verify GSTIN",
+        "description": "Validates and verifies a GSTIN. Requires the `verification.gstin.read` scope on the API key. Metered as `gstin.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/gstin`, including its `referenceId` field.",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GstinVerifyRequest"
+              },
+              "example": {
+                "gstin": "07AAAAA1111A1Z1",
+                "businessName": "Jane Doe Enterprises"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GstinVerificationResult"
+                },
+                "example": {
+                  "referenceId": "SMV-20260927-9K21P4",
+                  "GSTIN": "07AAAAA1111A1Z1",
+                  "valid": true,
+                  "legalName": "Jane Doe Enterprises Private Limited",
+                  "tradeName": "Jane Doe Enterprises",
+                  "registrationStatus": "Active",
+                  "principalPlaceOfBusiness": "123, MG Road, Bengaluru, Karnataka, 560001",
+                  "message": "GSTIN Exists"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GstinVerificationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "gstin must match the format 07AAAAA1111A1Z1",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "verification.gstin.read",
+        "x-price-inr-per-successful-call": 2,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "GSTIN documentation",
+          "url": "https://developer.stampmitra.in/docs/verification/gstin"
+        }
+      }
+    },
+    "/v1/verify/rc": {
+      "post": {
+        "operationId": "verifyVehicleRc",
+        "summary": "Verify Vehicle RC",
+        "description": "Validates and verifies a Vehicle RC. Requires the `verification.rc.read` scope on the API key. Metered as `rc.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/rc`, including its `referenceId` field.",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VehicleRcVerifyRequest"
+              },
+              "example": {
+                "vehicleNumber": "MH12AB1234"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleRcVerificationResult"
+                },
+                "example": {
+                  "referenceId": "SMV-20260927-3D71Q9",
+                  "regNo": "MH12AB1234",
+                  "registrationStatus": "VALID",
+                  "ownerName": "RAHUL KUMAR",
+                  "ownerFatherName": "SURESH KUMAR",
+                  "vehicleClass": "LMV",
+                  "vehicleManufacturerName": "MARUTI SUZUKI",
+                  "model": "SWIFT",
+                  "vehicleColor": "WHITE",
+                  "chassis": "MA3ERLF1S00123456",
+                  "engine": "K12MN1234567",
+                  "registrationDate": "2019-05-14",
+                  "rcStatus": "ACTIVE",
+                  "rcExpiryDate": "2034-05-13",
+                  "insuranceUpto": "2025-05-13",
+                  "isCommercial": false
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleRcVerificationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "vehicleNumber must match the format MH12AB1234",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "verification.rc.read",
+        "x-price-inr-per-successful-call": 2,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Vehicle RC documentation",
+          "url": "https://developer.stampmitra.in/docs/verification/rc"
+        }
+      }
+    },
+    "/v1/verify/voter-id": {
+      "post": {
+        "operationId": "verifyVoterId",
+        "summary": "Verify Voter ID",
+        "description": "Validates and verifies a Voter ID. Requires the `verification.voter.read` scope on the API key. Metered as `voter.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/voter-id`, including its `referenceId` field.",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoterIdVerifyRequest"
+              },
+              "example": {
+                "voterId": "ABC1234567",
+                "name": "Rahul Kumar"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoterIdVerificationResult"
+                },
+                "example": {
+                  "referenceId": "SMV-20260927-7H83M1",
+                  "valid": true,
+                  "name": "RAHUL KUMAR",
+                  "dob": "1990-01-01",
+                  "gender": "M",
+                  "age": 35,
+                  "address": "123, MG Road, Bengaluru",
+                  "state": "Karnataka"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoterIdVerificationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "voterId must match the format ABC1234567",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "verification.voter.read",
+        "x-price-inr-per-successful-call": 2,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Voter ID documentation",
+          "url": "https://developer.stampmitra.in/docs/verification/voter-id"
+        }
+      }
+    },
+    "/v1/verify/driving-license": {
+      "post": {
+        "operationId": "verifyDrivingLicense",
+        "summary": "Verify Driving Licence",
+        "description": "Validates and verifies a Driving Licence. Requires the `verification.dl.read` scope on the API key. Metered as `dl.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/driving-license`, including its `referenceId` field.",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DrivingLicenseVerifyRequest"
+              },
+              "example": {
+                "dlNumber": "MH1420110012345",
+                "dob": "1990-01-01"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DrivingLicenseVerificationResult"
+                },
+                "example": {
+                  "referenceId": "SMV-20260927-2Q56T8",
+                  "valid": true,
+                  "name": "RAHUL KUMAR",
+                  "fatherOrHusbandName": "SURESH KUMAR",
+                  "dob": "1990-01-01",
+                  "address": "123, MG Road, Bengaluru",
+                  "validUpto": "2030-12-31",
+                  "dlStatus": "ACTIVE"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DrivingLicenseVerificationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "dlNumber must match the format MH1420110012345",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "verification.dl.read",
+        "x-price-inr-per-successful-call": 2,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Driving Licence documentation",
+          "url": "https://developer.stampmitra.in/docs/verification/driving-license"
+        }
+      }
+    },
+    "/v1/verify/passport": {
+      "post": {
+        "operationId": "verifyPassport",
+        "summary": "Verify Passport",
+        "description": "Validates and verifies a Passport. Requires the `verification.passport.read` scope on the API key. Metered as `passport.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/passport`, including its `referenceId` field.",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PassportVerifyRequest"
+              },
+              "example": {
+                "fileNumber": "PA1079341954215",
+                "dob": "1990-01-01",
+                "name": "Rahul Kumar"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassportVerificationResult"
+                },
+                "example": {
+                  "referenceId": "SMV-20260927-4W19X6",
+                  "valid": true,
+                  "name": "RAHUL KUMAR",
+                  "dob": "1990-01-01",
+                  "applicationType": "Fresh"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassportVerificationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "fileNumber must match the format PA1079341954215",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "verification.passport.read",
+        "x-price-inr-per-successful-call": 2,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Passport documentation",
+          "url": "https://developer.stampmitra.in/docs/verification/passport"
+        }
+      }
+    },
+    "/v1/verify/cin": {
+      "post": {
+        "operationId": "verifyCin",
+        "summary": "Verify Company CIN",
+        "description": "Validates and verifies a Company CIN. Requires the `verification.cin.read` scope on the API key. Metered as `cin.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/cin`, including its `referenceId` field.",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CinVerifyRequest"
+              },
+              "example": {
+                "cin": "U74999DL2015PTC284009"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CinVerificationResult"
+                },
+                "example": {
+                  "referenceId": "SMV-20260927-6R38Y3",
+                  "valid": true,
+                  "companyName": "JANE DOE ENTERPRISES PRIVATE LIMITED",
+                  "incorporationDate": "2015-03-12",
+                  "cinStatus": "ACTIVE",
+                  "companyStatus": "Active",
+                  "directors": [
+                    {
+                      "din": "01234567",
+                      "name": "RAHUL KUMAR",
+                      "designation": "Director"
+                    }
+                  ],
+                  "email": "contact@example.com",
+                  "registrationNumber": "U74999DL2015PTC284009",
+                  "incorporationCountry": "India"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CinVerificationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "cin must match the format U74999DL2015PTC284009",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "verification.cin.read",
+        "x-price-inr-per-successful-call": 2,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Company CIN documentation",
+          "url": "https://developer.stampmitra.in/docs/verification/cin"
+        }
+      }
+    },
+    "/v1/verify/udyam": {
+      "post": {
+        "operationId": "verifyUdyam",
+        "summary": "Verify Udyam Registration",
+        "description": "Validates and verifies a Udyam Registration. Requires the `verification.udyam.read` scope on the API key. Metered as `udyam.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/udyam`, including its `referenceId` field.",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UdyamVerifyRequest"
+              },
+              "example": {
+                "udyamNumber": "UDYAM-MH-12-1234567"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UdyamVerificationResult"
+                },
+                "example": {
+                  "referenceId": "SMV-20260927-5U29V7",
+                  "found": true,
+                  "udyamStatus": "Active",
+                  "enterpriseName": "Jane Doe Enterprises",
+                  "enterpriseType": "Proprietorship",
+                  "organizationType": "Micro",
+                  "certificateUrl": "https://udyamregistration.gov.in/Udyam_Download/UDYAM-MH-12-1234567.pdf"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UdyamVerificationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "udyamNumber must match the format UDYAM-MH-12-1234567",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "verification.udyam.read",
+        "x-price-inr-per-successful-call": 2,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Udyam Registration documentation",
+          "url": "https://developer.stampmitra.in/docs/verification/udyam"
+        }
+      }
+    },
+    "/v1/verify/pan-to-gstin": {
+      "post": {
+        "operationId": "lookupGstinsByPan",
+        "summary": "Verify PAN to GSTIN",
+        "description": "Validates and verifies a PAN to GSTIN. Requires the `verification.pan_to_gstin.read` scope on the API key. Metered as `pan.to_gstin` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/pan-to-gstin`, including its `referenceId` field.",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PanToGstinRequest"
+              },
+              "example": {
+                "pan": "ABCDE1234F"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanToGstinResult"
+                },
+                "example": {
+                  "referenceId": "SMV-20260927-1L67Z5",
+                  "found": true,
+                  "gstins": [
+                    {
+                      "gstin": "07AAAAA1111A1Z1",
+                      "state": "Delhi",
+                      "status": "Active"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanToGstinResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "pan must match the format ABCDE1234F",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "verification.pan_to_gstin.read",
+        "x-price-inr-per-successful-call": 2,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "PAN to GSTIN documentation",
+          "url": "https://developer.stampmitra.in/docs/verification/pan-to-gstin"
+        }
+      }
+    },
+    "/v1/verify/pan-to-udyam": {
+      "post": {
+        "operationId": "lookupUdyamByPan",
+        "summary": "Verify PAN to Udyam",
+        "description": "Validates and verifies a PAN to Udyam. Requires the `verification.pan_to_udyam.read` scope on the API key. Metered as `pan.to_udyam` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/pan-to-udyam`, including its `referenceId` field.",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PanToUdyamRequest"
+              },
+              "example": {
+                "pan": "ABCDE1234F"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanToUdyamResult"
+                },
+                "example": {
+                  "referenceId": "SMV-20260927-0A44B2",
+                  "found": true,
+                  "status": "Active",
+                  "udyamNumber": "UDYAM-MH-12-1234567"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanToUdyamResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "pan must match the format ABCDE1234F",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "verification.pan_to_udyam.read",
+        "x-price-inr-per-successful-call": 2,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "PAN to Udyam documentation",
+          "url": "https://developer.stampmitra.in/docs/verification/pan-to-udyam"
+        }
+      }
+    },
+    "/v1/verify/bank-account": {
+      "post": {
+        "operationId": "verifyBankAccount",
+        "summary": "Verify Bank Account",
+        "description": "Validates and verifies a Bank Account. Requires the `verification.bank-account.read` scope on the API key. Metered as `bank-account.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/bank-account`, including its `referenceId` field.",
+        "tags": [
+          "Verification"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BankAccountVerifyRequest"
+              },
+              "example": {
+                "accountNumber": "000123456789",
+                "ifsc": "ICIC0001234",
+                "name": "Ravi Kumar"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountVerificationResult"
+                },
+                "example": {
+                  "referenceId": "SMV-20260927-3B71A0",
+                  "valid": true,
+                  "nameAtBank": "RAVI KUMAR",
+                  "bankName": "ICICI Bank",
+                  "utr": "017952100012345",
+                  "city": "Mumbai",
+                  "branch": "Andheri West",
+                  "micr": "400229002",
+                  "nameMatchScore": "100",
+                  "nameMatchResult": "GOOD_MATCH",
+                  "accountStatus": "ACCOUNT_IS_VALID",
+                  "accountStatusCode": "1",
+                  "ifscDetails": {
+                    "bank": "ICICI Bank",
+                    "ifsc": "ICIC0001234",
+                    "micr": "400229002",
+                    "address": "Andheri West, Mumbai",
+                    "city": "Mumbai",
+                    "state": "Maharashtra",
+                    "branch": "Andheri West"
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountVerificationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "accountNumber must be a 9-18 digit numeric bank account number",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "verification.bank-account.read",
+        "x-price-inr-per-successful-call": 4,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Bank Account documentation",
+          "url": "https://developer.stampmitra.in/docs/verification/bank-account"
+        }
+      }
+    },
+    "/v1/services": {
+      "get": {
+        "operationId": "listServices",
+        "summary": "List entitled services (generic catalog, covers e-Stamp services too)",
+        "description": "Returns every service (verification AND e-Stamp) this organization is entitled to. There is no e-Stamp-specific catalog endpoint yet; e-Stamp instruments surface here as regular service entries once entitled.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceList"
+                },
+                "example": [
+                  {
+                    "serviceCode": "estamp.instrument.rent_agreement",
+                    "name": "Rent Agreement e-Stamp",
+                    "category": "estamp",
+                    "basePrice": "500.00",
+                    "currency": "INR",
+                    "isActive": true,
+                    "gstRatePercent": "18.00",
+                    "defaultGovernmentFee": null,
+                    "processingTimeHours": 24,
+                    "guestCheckoutEnabled": false,
+                    "requiresDocuments": true,
+                    "uiSchema": null,
+                    "entitled": true,
+                    "entitlementUpdatedAt": "2026-09-01T10:00:00.000Z"
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "x-required-scope": "services.read",
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "e-Stamp Catalog Discovery documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-catalog"
+        }
+      }
+    },
+    "/v1/services/{serviceCode}": {
+      "get": {
+        "operationId": "getService",
+        "summary": "Get one entitled service's detail",
+        "description": "Detail for a single serviceCode, if entitled and active.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "serviceCode",
+            "in": "path",
+            "required": true,
+            "description": "The service's unique code.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Service"
+                },
+                "example": {
+                  "serviceCode": "estamp.instrument.rent_agreement",
+                  "name": "Rent Agreement e-Stamp",
+                  "category": "estamp",
+                  "basePrice": "500.00",
+                  "currency": "INR",
+                  "isActive": true,
+                  "gstRatePercent": "18.00",
+                  "defaultGovernmentFee": null,
+                  "processingTimeHours": 24,
+                  "guestCheckoutEnabled": false,
+                  "requiresDocuments": true,
+                  "uiSchema": null,
+                  "entitled": true,
+                  "entitlementUpdatedAt": "2026-09-01T10:00:00.000Z"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "x-required-scope": "services.read",
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "e-Stamp Catalog Discovery documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-catalog"
+        }
+      }
+    },
+    "/v1/estamp/schema/{serviceCode}": {
+      "get": {
+        "operationId": "getEstampSchema",
+        "summary": "Get the e-Stamp input field schema",
+        "description": "Generic form-rendering metadata for the e-Stamp product. `serviceCode` is accepted for forward-compatible route shape parity with other schema lookups; e-Stamp has exactly one schema regardless of its value. Requires the `estamp.read` scope.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "serviceCode",
+            "in": "path",
+            "required": true,
+            "description": "serviceCode from the URL path.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstampSchemaResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "e-Stamp Schema / Options documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-schema-options"
+        }
+      }
+    },
+    "/v1/estamp/states": {
+      "get": {
+        "operationId": "listEstampStates",
+        "summary": "List e-Stamp-eligible states",
+        "description": "Served from StampMitra's synced master-data catalogue. Requires the `estamp.read` scope.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstampStatesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "State / Instrument / Article Lookup documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-state-instrument-article"
+        }
+      }
+    },
+    "/v1/estamp/states/{stateCode}/instruments": {
+      "get": {
+        "operationId": "listEstampInstruments",
+        "summary": "List instruments (articles) for a state",
+        "description": "There is no separate instrument entity distinct from an article - this returns the same state-scoped article catalogue as the articles endpoint below. Requires the `estamp.read` scope.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "stateCode",
+            "in": "path",
+            "required": true,
+            "description": "stateCode from the URL path.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstampInstrumentsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "State / Instrument / Article Lookup documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-state-instrument-article"
+        }
+      }
+    },
+    "/v1/estamp/instruments/{instrumentCode}/articles": {
+      "get": {
+        "operationId": "listEstampArticles",
+        "summary": "List articles for an instrument",
+        "description": "`instrumentCode` is treated as a state code here - there is no article sub-breakdown below the state-scoped list. Requires the `estamp.read` scope.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "instrumentCode",
+            "in": "path",
+            "required": true,
+            "description": "instrumentCode from the URL path.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstampArticlesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "State / Instrument / Article Lookup documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-state-instrument-article"
+        }
+      }
+    },
+    "/v1/estamp/duty/calculate": {
+      "post": {
+        "operationId": "calculateEstampDuty",
+        "summary": "Calculate authoritative e-Stamp duty + service charges",
+        "description": "Runs the one authoritative pricing calculation; the response amount is never recalculated or overridden client-side. Requires the `estamp.duty.calculate` scope. Metered against your fulfilment wallet.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EstampDutyCalculateRequest"
+              },
+              "example": {
+                "stateCode": "MH",
+                "articleCode": "5",
+                "stampDutyAmount": 500
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstampDutyCalculation"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstampDutyCalculation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "estamp.duty.calculate",
+        "x-price-inr-per-successful-call": 5,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Duty / Value Calculation documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-duty-value"
+        }
+      }
+    },
+    "/v1/estamp/orders/{orderId}/parties": {
+      "post": {
+        "operationId": "addEstampOrderParties",
+        "summary": "Attach/correct e-Stamp order party (customer) details",
+        "description": "Attaches or corrects the customer/party details on an existing e-Stamp order. Requires the `estamp.parties.write` scope. Metered against your fulfilment wallet.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "description": "The e-Stamp order id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EstampPartiesRequest"
+              },
+              "example": {
+                "customerName": "Rahul Kumar",
+                "customerMobile": "+919876543210",
+                "customerEmail": "rahul@example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstampPartiesResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstampPartiesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "estamp.parties.write",
+        "x-price-inr-per-successful-call": 5,
+        "x-metered": true,
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Parties documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-parties"
+        }
+      }
+    },
+    "/v1/orders": {
+      "post": {
+        "operationId": "createOrder",
+        "summary": "Create an order (generic - works for any entitled serviceCode, including e-Stamp)",
+        "description": "Generic order-creation endpoint. For e-Stamp, pass an e-Stamp `serviceCode` (from GET /v1/services) and put instrument/party/value details in the free-form `details` object. There is no e-Stamp-specific request/response contract yet (no first-class `state`, `article`, `parties[]` fields) - the shape of `details` for e-Stamp is not finalized upstream.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderRequest"
+              },
+              "example": {
+                "externalOrderId": "ord_ext_123",
+                "externalCustomerId": "cust_ext_456",
+                "serviceCode": "estamp.instrument.rent_agreement",
+                "details": {
+                  "state": "MH",
+                  "stampValue": 500,
+                  "note": "Shape not finalized - illustrative only"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderReference"
+                },
+                "example": {
+                  "externalOrderId": "ord_ext_123",
+                  "createdAt": "2026-10-15T09:41:07.000Z",
+                  "serviceCode": "estamp.instrument.rent_agreement"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "orders.create",
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "e-Stamp Order Creation documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-orders"
+        }
+      }
+    },
+    "/v1/orders/{id}": {
+      "get": {
+        "operationId": "getOrder",
+        "summary": "Get an order",
+        "description": "Fetch an order by the externalOrderId you supplied when you created it.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The externalOrderId you supplied when the order was created.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "orders.read",
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "e-Stamp Order Creation documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-orders"
+        }
+      }
+    },
+    "/v1/orders/{id}/status": {
+      "get": {
+        "operationId": "getOrderStatus",
+        "summary": "Get order status",
+        "description": "Poll the current lifecycle status of an order.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The externalOrderId you supplied when the order was created.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "orders.read",
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "e-Stamp Order Creation documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-orders"
+        }
+      }
+    },
+    "/v1/payments/intents": {
+      "post": {
+        "operationId": "createPaymentIntent",
+        "summary": "Create a payment intent",
+        "description": "Create a payment intent (Razorpay-backed) for an order.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentIntentRequest"
+              },
+              "example": {
+                "externalOrderId": "ord_ext_123",
+                "amountMinor": 50000,
+                "currency": "INR",
+                "paymentConnectionId": "pc_8d1f3a2b"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntent"
+                },
+                "example": {
+                  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                  "externalOrderId": "ord_ext_123",
+                  "coreOrderId": null,
+                  "amountMinor": 50000,
+                  "currency": "INR",
+                  "status": "CREATED",
+                  "providerIntentId": "order_Nf3k2m9QxPz1Ab",
+                  "createdAt": "2026-10-15T09:41:07.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "x-required-scope": "payments.write",
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Payment documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-payment"
+        }
+      }
+    },
+    "/v1/payments/intents/{id}": {
+      "get": {
+        "operationId": "getPaymentIntent",
+        "summary": "Get a payment intent",
+        "description": "Fetch the current state of a payment intent.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "id from the URL path.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntent"
+                },
+                "example": {
+                  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                  "externalOrderId": "ord_ext_123",
+                  "coreOrderId": null,
+                  "amountMinor": 50000,
+                  "currency": "INR",
+                  "status": "CREATED",
+                  "providerIntentId": "order_Nf3k2m9QxPz1Ab",
+                  "createdAt": "2026-10-15T09:41:07.000Z"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "x-required-scope": "payments.read",
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Payment documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-payment"
+        }
+      }
+    },
+    "/v1/orders/{id}/payment": {
+      "get": {
+        "operationId": "getOrderPayment",
+        "summary": "Get an order's payment",
+        "description": "Fetch the payment associated with a given order.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The externalOrderId you supplied when the order was created.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderPaymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "orders.read",
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Payment documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-payment"
+        }
+      }
+    },
+    "/v1/orders/{id}/documents": {
+      "get": {
+        "operationId": "listOrderDocuments",
+        "summary": "List documents for an order",
+        "description": "List generated documents (e.g. the e-Stamp certificate PDF) for a completed order.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The externalOrderId you supplied when the order was created.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDocumentsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "documents.read",
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Order Status & Document Access documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-documents"
+        }
+      }
+    },
+    "/v1/orders/{id}/documents/{documentId}/download": {
+      "get": {
+        "operationId": "getOrderDocumentDownloadUrl",
+        "summary": "Get a document download URL",
+        "description": "Get a (typically short-lived, signed) URL to download a specific document.",
+        "tags": [
+          "e-Stamp"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The externalOrderId you supplied when the order was created.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "description": "documentId from the URL path.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDownloadUrl"
+                },
+                "example": {
+                  "downloadUrl": "https://files.stampmitra.in/signed/doc_00789.pdf?token=abc123",
+                  "expiresAt": "2026-10-15T09:56:07.000Z"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "x-required-scope": "documents.read",
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "externalDocs": {
+          "description": "Order Status & Document Access documentation",
+          "url": "https://developer.stampmitra.in/docs/estamp/estamp-documents"
+        }
+      }
+    },
+    "/v1/usage/summary": {
+      "get": {
+        "operationId": "getUsageSummary",
+        "summary": "Usage summary",
+        "description": "Current billing period totals, calls by service, calls by day and a 6-month calls-by-period trend for the organization that owns the API key.",
+        "tags": [
+          "Usage & Logs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageSummary"
+                },
+                "example": {
+                  "currentPeriod": {
+                    "start": "2026-10-01T00:00:00.000Z",
+                    "end": "2026-11-01T00:00:00.000Z"
+                  },
+                  "totalApiRequests": 1240,
+                  "callsByService": {
+                    "pan.verify": 800,
+                    "estamp": 440
+                  },
+                  "callsByPeriod": [
+                    {
+                      "period": "2026-10",
+                      "count": 1240
+                    }
+                  ],
+                  "callsByDay": [
+                    {
+                      "day": "2026-10-15",
+                      "count": 62
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "x-idempotent": true,
+        "x-retry-safe": true
+      }
+    },
+    "/v1/logs": {
+      "get": {
+        "operationId": "listLogs",
+        "summary": "List request logs",
+        "description": "Paginated request-log listing for the organization that owns the API key. Use nextCursor to fetch the next page.",
+        "tags": [
+          "Usage & Logs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "ISO date/time lower bound (inclusive).",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "ISO date/time upper bound (exclusive).",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "description": "Filter to one service code, e.g. estamp.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "success or failure.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "success",
+                "failure"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Page size, default 50, max 200.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor from a previous response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogsPage"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "b3f1c2a4-7d5e-4a6b-9c8d-1e2f3a4b5c6d",
+                      "createdAt": "2026-10-15T09:41:07.000Z",
+                      "actorType": "api_key",
+                      "actorId": null,
+                      "service": "pan.verify",
+                      "metadata": null
+                    }
+                  ],
+                  "nextCursor": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation, or the organization is not entitled to the service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "status must be 'success' or 'failure'",
+                    "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "x-idempotent": true,
+        "x-retry-safe": true,
+        "x-pagination": {
+          "style": "cursor",
+          "cursorParam": "cursor",
+          "limitParam": "limit",
+          "itemsField": "items",
+          "nextCursorField": "nextCursor"
+        }
+      }
+    },
+    "/v1/webhooks/events": {
+      "get": {
+        "operationId": "listWebhookEvents",
+        "summary": "List webhook delivery attempts",
+        "description": "Paginated list of your organization's own webhook delivery attempts.",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Page size.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor from a previous response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEventsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "webhooks.events.read",
+        "x-idempotent": true,
+        "x-retry-safe": true
+      }
+    },
+    "/v1/webhooks/events/{id}/replay": {
+      "post": {
+        "operationId": "replayWebhookEvent",
+        "summary": "Replay a webhook delivery",
+        "description": "Re-fires a specific webhook delivery attempt: the exact same payload through the same delivery path.",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Webhook delivery attempt id (UUID).",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookReplayResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Success, same body as 200. The backend documents 200 but NestJS defaults POST handlers to 201, so clients must accept any 2xx.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookReplayResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        },
+        "x-required-scope": "webhooks.events.replay",
+        "x-idempotent": false,
+        "x-retry-safe": false
+      }
+    }
+  },
+  "webhooks": {
+    "order.created": {
+      "post": {
+        "operationId": "receiveOrderCreated",
+        "summary": "An order was created.",
+        "description": "Delivered to an endpoint you registered when the order event ORDER_CREATED occurs. Verify X-Webhook-Signature before trusting the body, and respond with any 2xx to acknowledge. A non-2xx response or timeout is retried with exponential backoff (1 min, 5 min, 30 min, 2 h, 12 h; 6 attempts in total) before the delivery is dead-lettered.",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookSignature"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookTimestamp"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookEventId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              },
+              "example": {
+                "coreOrderId": "core_order_9f3a1c2b8e4d4a5f",
+                "coreEventType": "ORDER_CREATED",
+                "occurredAt": "2026-09-25T09:05:00.000Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "Acknowledged. Any 2xx status marks the delivery as succeeded."
+          }
+        }
+      }
+    },
+    "order.payment_confirmed": {
+      "post": {
+        "operationId": "receiveOrderPaymentConfirmed",
+        "summary": "Payment for an order was confirmed.",
+        "description": "Delivered to an endpoint you registered when the order event PAYMENT_CONFIRMED occurs. Verify X-Webhook-Signature before trusting the body, and respond with any 2xx to acknowledge. A non-2xx response or timeout is retried with exponential backoff (1 min, 5 min, 30 min, 2 h, 12 h; 6 attempts in total) before the delivery is dead-lettered.",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookSignature"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookTimestamp"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookEventId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              },
+              "example": {
+                "coreOrderId": "core_order_9f3a1c2b8e4d4a5f",
+                "coreEventType": "PAYMENT_CONFIRMED",
+                "occurredAt": "2026-09-25T09:05:00.000Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "Acknowledged. Any 2xx status marks the delivery as succeeded."
+          }
+        }
+      }
+    },
+    "order.fulfilment_started": {
+      "post": {
+        "operationId": "receiveOrderFulfilmentStarted",
+        "summary": "Fulfilment of an order has started.",
+        "description": "Delivered to an endpoint you registered when the order event FULFILMENT_STARTED occurs. Verify X-Webhook-Signature before trusting the body, and respond with any 2xx to acknowledge. A non-2xx response or timeout is retried with exponential backoff (1 min, 5 min, 30 min, 2 h, 12 h; 6 attempts in total) before the delivery is dead-lettered.",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookSignature"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookTimestamp"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookEventId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              },
+              "example": {
+                "coreOrderId": "core_order_9f3a1c2b8e4d4a5f",
+                "coreEventType": "FULFILMENT_STARTED",
+                "occurredAt": "2026-09-25T09:05:00.000Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "Acknowledged. Any 2xx status marks the delivery as succeeded."
+          }
+        }
+      }
+    },
+    "order.fulfilment_completed": {
+      "post": {
+        "operationId": "receiveOrderFulfilmentCompleted",
+        "summary": "An order finished fulfilling successfully.",
+        "description": "Delivered to an endpoint you registered when the order event FULFILMENT_COMPLETED occurs. Verify X-Webhook-Signature before trusting the body, and respond with any 2xx to acknowledge. A non-2xx response or timeout is retried with exponential backoff (1 min, 5 min, 30 min, 2 h, 12 h; 6 attempts in total) before the delivery is dead-lettered.",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookSignature"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookTimestamp"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookEventId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              },
+              "example": {
+                "coreOrderId": "core_order_9f3a1c2b8e4d4a5f",
+                "coreEventType": "FULFILMENT_COMPLETED",
+                "occurredAt": "2026-09-25T09:05:00.000Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "Acknowledged. Any 2xx status marks the delivery as succeeded."
+          }
+        }
+      }
+    },
+    "order.failed": {
+      "post": {
+        "operationId": "receiveOrderFailed",
+        "summary": "An order failed.",
+        "description": "Delivered to an endpoint you registered when the order event ORDER_FAILED occurs. Verify X-Webhook-Signature before trusting the body, and respond with any 2xx to acknowledge. A non-2xx response or timeout is retried with exponential backoff (1 min, 5 min, 30 min, 2 h, 12 h; 6 attempts in total) before the delivery is dead-lettered.",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookSignature"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookTimestamp"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookEventId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              },
+              "example": {
+                "coreOrderId": "core_order_9f3a1c2b8e4d4a5f",
+                "coreEventType": "ORDER_FAILED",
+                "occurredAt": "2026-09-25T09:05:00.000Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "Acknowledged. Any 2xx status marks the delivery as succeeded."
+          }
+        }
+      }
+    },
+    "order.cancelled": {
+      "post": {
+        "operationId": "receiveOrderCancelled",
+        "summary": "An order was cancelled.",
+        "description": "Delivered to an endpoint you registered when the order event ORDER_CANCELLED occurs. Verify X-Webhook-Signature before trusting the body, and respond with any 2xx to acknowledge. A non-2xx response or timeout is retried with exponential backoff (1 min, 5 min, 30 min, 2 h, 12 h; 6 attempts in total) before the delivery is dead-lettered.",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookSignature"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookTimestamp"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookEventId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              },
+              "example": {
+                "coreOrderId": "core_order_9f3a1c2b8e4d4a5f",
+                "coreEventType": "ORDER_CANCELLED",
+                "occurredAt": "2026-09-25T09:05:00.000Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "Acknowledged. Any 2xx status marks the delivery as succeeded."
+          }
+        }
+      }
+    },
+    "order.refund_completed": {
+      "post": {
+        "operationId": "receiveOrderRefundCompleted",
+        "summary": "A refund for an order completed.",
+        "description": "Delivered to an endpoint you registered when the order event REFUND_COMPLETED occurs. Verify X-Webhook-Signature before trusting the body, and respond with any 2xx to acknowledge. A non-2xx response or timeout is retried with exponential backoff (1 min, 5 min, 30 min, 2 h, 12 h; 6 attempts in total) before the delivery is dead-lettered.",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookSignature"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookTimestamp"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookEventId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              },
+              "example": {
+                "coreOrderId": "core_order_9f3a1c2b8e4d4a5f",
+                "coreEventType": "REFUND_COMPLETED",
+                "occurredAt": "2026-09-25T09:05:00.000Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "Acknowledged. Any 2xx status marks the delivery as succeeded."
+          }
+        }
+      }
+    },
+    "order.document_ready": {
+      "post": {
+        "operationId": "receiveOrderDocumentReady",
+        "summary": "A generated document (for example the e-Stamp certificate) is ready.",
+        "description": "Delivered to an endpoint you registered when the order event DOCUMENT_READY occurs. Verify X-Webhook-Signature before trusting the body, and respond with any 2xx to acknowledge. A non-2xx response or timeout is retried with exponential backoff (1 min, 5 min, 30 min, 2 h, 12 h; 6 attempts in total) before the delivery is dead-lettered.",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookSignature"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookTimestamp"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookEventId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              },
+              "example": {
+                "coreOrderId": "core_order_9f3a1c2b8e4d4a5f",
+                "coreEventType": "DOCUMENT_READY",
+                "occurredAt": "2026-09-25T09:05:00.000Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "Acknowledged. Any 2xx status marks the delivery as succeeded."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key as `Authorization: Bearer sk_test_...` or `sk_live_...`."
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "Alternative to the Authorization header."
+      }
+    },
+    "schemas": {
+      "PanVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "pan": {
+            "type": "string",
+            "description": "The PAN to verify: 5 letters, 4 digits, 1 letter.",
+            "pattern": "^[A-Z]{5}[0-9]{4}[A-Z]$",
+            "minLength": 10,
+            "maxLength": 10,
+            "examples": [
+              "ABCDE1234F"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Name to cross-check against the PAN record.",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "pan"
+        ],
+        "description": "Verify a PAN.",
+        "additionalProperties": false
+      },
+      "GstinVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "gstin": {
+            "type": "string",
+            "description": "The GSTIN to verify (15 characters).",
+            "pattern": "^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$",
+            "minLength": 15,
+            "maxLength": 15,
+            "examples": [
+              "07AAAAA1111A1Z1"
+            ]
+          },
+          "businessName": {
+            "type": "string",
+            "description": "Business (legal or trade) name to cross-check against the registration.",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "gstin"
+        ],
+        "description": "Verify a GSTIN.",
+        "additionalProperties": false
+      },
+      "VehicleRcVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "vehicleNumber": {
+            "type": "string",
+            "description": "The vehicle registration number to verify.",
+            "pattern": "^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{4}$",
+            "examples": [
+              "MH12AB1234"
+            ]
+          }
+        },
+        "required": [
+          "vehicleNumber"
+        ],
+        "description": "Verify a vehicle registration certificate.",
+        "additionalProperties": false
+      },
+      "VoterIdVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "voterId": {
+            "type": "string",
+            "description": "The voter ID (EPIC number) to verify.",
+            "pattern": "^[A-Z]{3}[0-9]{7}$",
+            "examples": [
+              "ABC1234567"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Name to cross-check against the voter's registered name.",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "voterId"
+        ],
+        "description": "Verify a Voter ID.",
+        "additionalProperties": false
+      },
+      "DrivingLicenseVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "dlNumber": {
+            "type": "string",
+            "description": "The driving licence number to verify.",
+            "pattern": "^[A-Z]{2}[0-9]{2}[0-9]{11}$",
+            "examples": [
+              "MH1420110012345"
+            ]
+          },
+          "dob": {
+            "type": "string",
+            "description": "Date of birth of the licence holder, ISO 8601 date (YYYY-MM-DD).",
+            "format": "date"
+          }
+        },
+        "required": [
+          "dlNumber",
+          "dob"
+        ],
+        "description": "Verify a driving licence.",
+        "additionalProperties": false
+      },
+      "PassportVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "fileNumber": {
+            "type": "string",
+            "description": "The Indian passport application file number (not the passport number).",
+            "pattern": "^[A-Z]{2}[0-9]{13}$",
+            "examples": [
+              "PA1079341954215"
+            ]
+          },
+          "dob": {
+            "type": "string",
+            "description": "Date of birth of the applicant, ISO 8601 date (YYYY-MM-DD).",
+            "format": "date"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name to cross-check against the passport application.",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "fileNumber",
+          "dob"
+        ],
+        "description": "Verify an Indian passport application.",
+        "additionalProperties": false
+      },
+      "CinVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "cin": {
+            "type": "string",
+            "description": "The Corporate Identification Number to verify.",
+            "pattern": "^[LU][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$",
+            "examples": [
+              "U74999DL2015PTC284009"
+            ]
+          }
+        },
+        "required": [
+          "cin"
+        ],
+        "description": "Verify a company CIN.",
+        "additionalProperties": false
+      },
+      "UdyamVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "udyamNumber": {
+            "type": "string",
+            "description": "The Udyam (MSME) registration number to verify.",
+            "pattern": "^UDYAM-[A-Z]{2}-[0-9]{2}-[0-9]{7}$",
+            "examples": [
+              "UDYAM-MH-12-1234567"
+            ]
+          }
+        },
+        "required": [
+          "udyamNumber"
+        ],
+        "description": "Verify a Udyam registration.",
+        "additionalProperties": false
+      },
+      "PanToGstinRequest": {
+        "type": "object",
+        "properties": {
+          "pan": {
+            "type": "string",
+            "description": "The PAN to look registered GSTIN(s) up for.",
+            "pattern": "^[A-Z]{5}[0-9]{4}[A-Z]$",
+            "minLength": 10,
+            "maxLength": 10,
+            "examples": [
+              "ABCDE1234F"
+            ]
+          }
+        },
+        "required": [
+          "pan"
+        ],
+        "description": "Resolve a PAN to its GSTIN(s).",
+        "additionalProperties": false
+      },
+      "PanToUdyamRequest": {
+        "type": "object",
+        "properties": {
+          "pan": {
+            "type": "string",
+            "description": "The PAN to look associated Udyam registration(s) up for.",
+            "pattern": "^[A-Z]{5}[0-9]{4}[A-Z]$",
+            "minLength": 10,
+            "maxLength": 10,
+            "examples": [
+              "ABCDE1234F"
+            ]
+          }
+        },
+        "required": [
+          "pan"
+        ],
+        "description": "Resolve a PAN to its Udyam registration(s).",
+        "additionalProperties": false
+      },
+      "BankAccountVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "accountNumber": {
+            "type": "string",
+            "description": "Bank account number (9-18 digits).",
+            "pattern": "^[0-9]{9,18}$",
+            "minLength": 9,
+            "maxLength": 18,
+            "examples": [
+              "000123456789"
+            ]
+          },
+          "ifsc": {
+            "type": "string",
+            "description": "IFSC code of the account's branch (11 characters).",
+            "pattern": "^[A-Z]{4}0[A-Z0-9]{6}$",
+            "minLength": 11,
+            "maxLength": 11,
+            "examples": [
+              "ICIC0001234"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Name to cross-check against the bank's registered account holder name."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Account holder's Indian mobile number, when available; improves match confidence.",
+            "pattern": "^(?:\\+?91|0)?[6-9][0-9]{9}$"
+          }
+        },
+        "required": [
+          "accountNumber",
+          "ifsc"
+        ],
+        "description": "Verify a bank account (penny drop).",
+        "additionalProperties": false
+      },
+      "EstampDutyCalculateRequest": {
+        "type": "object",
+        "properties": {
+          "stateCode": {
+            "type": "string",
+            "description": "State code, e.g. MH."
+          },
+          "articleCode": {
+            "type": "string",
+            "description": "Stamp article code, from the articles lookup."
+          },
+          "districtCode": {
+            "type": "string",
+            "description": "District code, where the state needs one."
+          },
+          "sroValue": {
+            "type": "string",
+            "description": "Sub-registrar office value, where the state needs one."
+          },
+          "stampDutyAmount": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Stamp duty amount to calculate charges for; must be positive."
+          },
+          "doorstepDelivery": {
+            "type": "boolean",
+            "description": "Whether doorstep delivery is requested."
+          },
+          "couponCode": {
+            "type": "string",
+            "description": "Coupon code to apply."
+          },
+          "masterDataVersion": {
+            "type": "integer",
+            "description": "Master-data version the caller last read."
+          }
+        },
+        "required": [
+          "stateCode",
+          "articleCode",
+          "stampDutyAmount"
+        ],
+        "description": "Calculate authoritative e-Stamp duty and service charges.",
+        "additionalProperties": false
+      },
+      "EstampPartiesRequest": {
+        "type": "object",
+        "properties": {
+          "customerName": {
+            "type": "string",
+            "description": "Customer's full name."
+          },
+          "partyName": {
+            "type": "string",
+            "description": "Counter-party's full name."
+          },
+          "customerMobile": {
+            "type": "string",
+            "description": "Customer's mobile number."
+          },
+          "customerEmail": {
+            "type": "string",
+            "description": "Customer's email address."
+          },
+          "partyAddress": {
+            "type": "string",
+            "description": "Party's address."
+          },
+          "partyPan": {
+            "type": "string",
+            "description": "Party's PAN."
+          }
+        },
+        "description": "Attach or correct party details on an e-Stamp order. Every field is optional.",
+        "additionalProperties": false
+      },
+      "CreateOrderRequest": {
+        "type": "object",
+        "properties": {
+          "externalOrderId": {
+            "type": "string",
+            "description": "Your own reference for this order; re-posting the same value returns the existing order.",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "externalCustomerId": {
+            "type": "string",
+            "description": "Your own reference for the customer; must already exist (created via the customers API).",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "serviceCode": {
+            "type": "string",
+            "description": "The entitled service to order (for e-Stamp, an estamp.* code from the services list).",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Free-form, service-specific payload. The e-Stamp field shape is not finalized."
+          }
+        },
+        "required": [
+          "externalOrderId",
+          "externalCustomerId",
+          "serviceCode"
+        ],
+        "description": "Create an order for any entitled serviceCode.",
+        "additionalProperties": false
+      },
+      "CreatePaymentIntentRequest": {
+        "type": "object",
+        "properties": {
+          "externalOrderId": {
+            "type": "string",
+            "description": "Your reference for the order being paid.",
+            "minLength": 1
+          },
+          "amountMinor": {
+            "type": "integer",
+            "description": "Amount in minor units (paise); positive integer.",
+            "exclusiveMinimum": 0
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code, at least 3 characters, e.g. INR.",
+            "minLength": 3
+          },
+          "paymentConnectionId": {
+            "type": "string",
+            "description": "Id of one of your active payment connections."
+          }
+        },
+        "required": [
+          "externalOrderId",
+          "amountMinor",
+          "currency",
+          "paymentConnectionId"
+        ],
+        "description": "Create a payment intent for an order.",
+        "additionalProperties": false
+      },
+      "PanVerificationResult": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key."
+          },
+          "pan": {
+            "type": "string",
+            "description": "The PAN that was verified."
+          },
+          "type": {
+            "type": "string",
+            "description": "Holder type, e.g. Individual."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the PAN is valid. A negative result is still a completed, billable verification."
+          },
+          "registeredName": {
+            "type": "string",
+            "description": "Name registered against the PAN."
+          },
+          "fatherName": {
+            "type": "string",
+            "description": "Father's name registered against the PAN."
+          },
+          "panStatus": {
+            "type": "string",
+            "description": "PAN status, e.g. VALID."
+          },
+          "panStatusCode": {
+            "type": "string",
+            "description": "Machine-readable code for panStatus."
+          },
+          "panStatusDescription": {
+            "type": "string",
+            "description": "Human-readable description of panStatus."
+          },
+          "nameMatchResult": {
+            "type": "string",
+            "description": "Result of cross-checking the supplied name. Only present when a name was supplied."
+          },
+          "nameMatchScore": {
+            "type": "string",
+            "description": "Name similarity score (0-100, as a string). Only present when a name was supplied."
+          },
+          "aadhaarSeedingStatus": {
+            "type": "string",
+            "description": "Aadhaar seeding status code."
+          },
+          "aadhaarSeedingStatusDescription": {
+            "type": "string",
+            "description": "Description of the Aadhaar seeding status."
+          },
+          "lastUpdatedAt": {
+            "type": "string",
+            "description": "When the PAN record was last updated."
+          },
+          "message": {
+            "type": "string",
+            "description": "Provider message."
+          }
+        },
+        "required": [
+          "referenceId",
+          "pan",
+          "valid"
+        ],
+        "description": "Result of a PAN verification."
+      },
+      "GstinVerificationResult": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key."
+          },
+          "GSTIN": {
+            "type": "string",
+            "description": "The GSTIN that was verified."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the GSTIN exists and is valid."
+          },
+          "legalName": {
+            "type": "string",
+            "description": "Legal name of the registrant."
+          },
+          "tradeName": {
+            "type": "string",
+            "description": "Trade name of the registrant."
+          },
+          "registrationStatus": {
+            "type": "string",
+            "description": "Registration status, e.g. Active."
+          },
+          "principalPlaceOfBusiness": {
+            "type": "string",
+            "description": "Principal place of business."
+          },
+          "message": {
+            "type": "string",
+            "description": "Provider message."
+          }
+        },
+        "required": [
+          "referenceId",
+          "GSTIN",
+          "valid"
+        ],
+        "description": "Result of a GSTIN verification."
+      },
+      "VehicleRcVerificationResult": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key."
+          },
+          "regNo": {
+            "type": "string",
+            "description": "The registration number that was looked up."
+          },
+          "registrationStatus": {
+            "type": "string",
+            "description": "Registration status, e.g. VALID."
+          },
+          "ownerName": {
+            "type": "string",
+            "description": "Registered owner's name."
+          },
+          "ownerFatherName": {
+            "type": "string",
+            "description": "Registered owner's father's name."
+          },
+          "vehicleClass": {
+            "type": "string",
+            "description": "Vehicle class, e.g. LMV."
+          },
+          "vehicleManufacturerName": {
+            "type": "string",
+            "description": "Manufacturer."
+          },
+          "model": {
+            "type": "string",
+            "description": "Model."
+          },
+          "vehicleColor": {
+            "type": "string",
+            "description": "Colour."
+          },
+          "chassis": {
+            "type": "string",
+            "description": "Chassis number (may be masked)."
+          },
+          "engine": {
+            "type": "string",
+            "description": "Engine number (may be masked)."
+          },
+          "registrationDate": {
+            "type": "string",
+            "description": "Registration date."
+          },
+          "rcStatus": {
+            "type": "string",
+            "description": "RC status, e.g. ACTIVE."
+          },
+          "rcExpiryDate": {
+            "type": "string",
+            "description": "RC expiry date."
+          },
+          "insuranceUpto": {
+            "type": "string",
+            "description": "Insurance valid-until date."
+          },
+          "isCommercial": {
+            "type": "boolean",
+            "description": "Whether the vehicle is registered as commercial."
+          }
+        },
+        "required": [
+          "referenceId",
+          "regNo",
+          "registrationStatus"
+        ],
+        "description": "Result of a vehicle RC verification."
+      },
+      "VoterIdVerificationResult": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the Voter ID is valid."
+          },
+          "name": {
+            "type": "string",
+            "description": "Registered name."
+          },
+          "dob": {
+            "type": "string",
+            "description": "Date of birth."
+          },
+          "gender": {
+            "type": "string",
+            "description": "Gender."
+          },
+          "age": {
+            "type": "integer",
+            "description": "Age in years."
+          },
+          "address": {
+            "type": "string",
+            "description": "Registered address."
+          },
+          "state": {
+            "type": "string",
+            "description": "State."
+          }
+        },
+        "required": [
+          "referenceId",
+          "valid"
+        ],
+        "description": "Result of a Voter ID verification."
+      },
+      "DrivingLicenseVerificationResult": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the licence is valid."
+          },
+          "name": {
+            "type": "string",
+            "description": "Licence holder's name."
+          },
+          "fatherOrHusbandName": {
+            "type": "string",
+            "description": "Father's or husband's name."
+          },
+          "dob": {
+            "type": "string",
+            "description": "Date of birth."
+          },
+          "address": {
+            "type": "string",
+            "description": "Address."
+          },
+          "validUpto": {
+            "type": "string",
+            "description": "Licence valid-until date."
+          },
+          "dlStatus": {
+            "type": "string",
+            "description": "Licence status, e.g. ACTIVE."
+          }
+        },
+        "required": [
+          "referenceId",
+          "valid"
+        ],
+        "description": "Result of a driving licence verification."
+      },
+      "PassportVerificationResult": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the passport application was found and matches."
+          },
+          "name": {
+            "type": "string",
+            "description": "Applicant's name."
+          },
+          "dob": {
+            "type": "string",
+            "description": "Date of birth."
+          },
+          "applicationType": {
+            "type": "string",
+            "description": "Application type, e.g. Fresh."
+          }
+        },
+        "required": [
+          "referenceId",
+          "valid"
+        ],
+        "description": "Result of a passport verification."
+      },
+      "CinDirector": {
+        "type": "object",
+        "properties": {
+          "din": {
+            "type": "string",
+            "description": "Director Identification Number."
+          },
+          "name": {
+            "type": "string",
+            "description": "Director's name."
+          },
+          "designation": {
+            "type": "string",
+            "description": "Designation."
+          }
+        },
+        "required": [
+          "din",
+          "name",
+          "designation"
+        ],
+        "description": "A company director."
+      },
+      "CinVerificationResult": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the CIN is valid."
+          },
+          "companyName": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "incorporationDate": {
+            "type": "string",
+            "description": "Incorporation date."
+          },
+          "cinStatus": {
+            "type": "string",
+            "description": "CIN status."
+          },
+          "companyStatus": {
+            "type": "string",
+            "description": "Company status."
+          },
+          "directors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CinDirector"
+            },
+            "description": "Directors on record."
+          },
+          "email": {
+            "type": "string",
+            "description": "Company email address."
+          },
+          "registrationNumber": {
+            "type": "string",
+            "description": "Registration number."
+          },
+          "incorporationCountry": {
+            "type": "string",
+            "description": "Country of incorporation."
+          }
+        },
+        "required": [
+          "referenceId",
+          "valid"
+        ],
+        "description": "Result of a company CIN verification."
+      },
+      "UdyamVerificationResult": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key."
+          },
+          "found": {
+            "type": "boolean",
+            "description": "Whether the Udyam registration was found."
+          },
+          "udyamStatus": {
+            "type": "string",
+            "description": "Registration status."
+          },
+          "enterpriseName": {
+            "type": "string",
+            "description": "Enterprise name."
+          },
+          "enterpriseType": {
+            "type": "string",
+            "description": "Enterprise type."
+          },
+          "organizationType": {
+            "type": "string",
+            "description": "Organization type, e.g. Micro."
+          },
+          "certificateUrl": {
+            "type": "string",
+            "description": "URL of the Udyam certificate.",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "referenceId",
+          "found"
+        ],
+        "description": "Result of a Udyam verification."
+      },
+      "PanToGstinEntry": {
+        "type": "object",
+        "properties": {
+          "gstin": {
+            "type": "string",
+            "description": "A GSTIN registered against the PAN."
+          },
+          "state": {
+            "type": "string",
+            "description": "State of registration."
+          },
+          "status": {
+            "type": "string",
+            "description": "Registration status."
+          }
+        },
+        "required": [
+          "gstin",
+          "state",
+          "status"
+        ],
+        "description": "One GSTIN registered against a PAN."
+      },
+      "PanToGstinResult": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key."
+          },
+          "found": {
+            "type": "boolean",
+            "description": "Whether any GSTIN was found for the PAN."
+          },
+          "gstins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PanToGstinEntry"
+            },
+            "description": "GSTINs registered against the PAN."
+          }
+        },
+        "required": [
+          "referenceId",
+          "found",
+          "gstins"
+        ],
+        "description": "Result of a PAN to GSTIN lookup."
+      },
+      "PanToUdyamResult": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key."
+          },
+          "found": {
+            "type": "boolean",
+            "description": "Whether a Udyam registration was found for the PAN."
+          },
+          "status": {
+            "type": "string",
+            "description": "Registration status."
+          },
+          "udyamNumber": {
+            "type": "string",
+            "description": "The Udyam registration number."
+          }
+        },
+        "required": [
+          "referenceId",
+          "found"
+        ],
+        "description": "Result of a PAN to Udyam lookup."
+      },
+      "IfscDetails": {
+        "type": "object",
+        "properties": {
+          "bank": {
+            "type": "string",
+            "description": "Bank name."
+          },
+          "ifsc": {
+            "type": "string",
+            "description": "IFSC code, echoed back."
+          },
+          "micr": {
+            "type": "string",
+            "description": "MICR code of the branch."
+          },
+          "nbin": {
+            "type": "string",
+            "description": "National Bank Identification Number."
+          },
+          "address": {
+            "type": "string",
+            "description": "Branch address."
+          },
+          "city": {
+            "type": "string",
+            "description": "Branch city."
+          },
+          "state": {
+            "type": "string",
+            "description": "Branch state."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch name."
+          },
+          "ifscSubcode": {
+            "type": "string",
+            "description": "IFSC sub-code, when applicable."
+          },
+          "category": {
+            "type": "string",
+            "description": "Bank category."
+          },
+          "swiftCode": {
+            "type": "string",
+            "description": "SWIFT code of the branch, when available."
+          }
+        },
+        "description": "Bank-branch metadata for the IFSC supplied in the request."
+      },
+      "BankAccountVerificationResult": {
+        "type": "object",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the account is valid (true only for an active/valid account status)."
+          },
+          "nameAtBank": {
+            "type": "string",
+            "description": "Account holder's name as registered with the bank."
+          },
+          "bankName": {
+            "type": "string",
+            "description": "Bank name."
+          },
+          "utr": {
+            "type": "string",
+            "description": "UTR of the penny-drop transaction, when one was generated."
+          },
+          "city": {
+            "type": "string",
+            "description": "City of the account-holding branch."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Name of the account-holding branch."
+          },
+          "micr": {
+            "type": "string",
+            "description": "MICR code of the branch."
+          },
+          "nameMatchScore": {
+            "type": "string",
+            "description": "Name similarity score (0-100, as a string). Only present when a name was supplied."
+          },
+          "nameMatchResult": {
+            "type": "string",
+            "description": "Result of cross-checking the supplied name against nameAtBank. Only present when a name was supplied."
+          },
+          "accountStatus": {
+            "type": "string",
+            "description": "Raw account status from the bank/NPCI."
+          },
+          "accountStatusCode": {
+            "type": "string",
+            "description": "Machine-readable code for accountStatus."
+          },
+          "ifscDetails": {
+            "$ref": "#/components/schemas/IfscDetails"
+          }
+        },
+        "required": [
+          "referenceId",
+          "valid"
+        ],
+        "description": "Result of a bank account verification. Only referenceId and valid are guaranteed."
+      },
+      "Service": {
+        "type": "object",
+        "properties": {
+          "serviceCode": {
+            "type": "string",
+            "description": "The service's unique code."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name."
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Service category."
+          },
+          "basePrice": {
+            "type": "string",
+            "description": "Base price in rupees, as a decimal string."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the service is active in the catalog."
+          },
+          "gstRatePercent": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "GST rate in percent, as a decimal string."
+          },
+          "defaultGovernmentFee": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Default government fee, as a decimal string."
+          },
+          "processingTimeHours": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Typical processing time in hours."
+          },
+          "guestCheckoutEnabled": {
+            "type": "boolean",
+            "description": "Whether guest checkout is enabled."
+          },
+          "requiresDocuments": {
+            "type": "boolean",
+            "description": "Whether the service requires documents."
+          },
+          "uiSchema": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Form field definitions passed through from the catalog.",
+            "properties": {
+              "fields": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "required": [
+              "fields"
+            ]
+          },
+          "entitled": {
+            "type": "boolean",
+            "const": true,
+            "description": "Always true: only services your organization is entitled to are returned."
+          },
+          "entitlementUpdatedAt": {
+            "type": "string",
+            "description": "When the entitlement was last updated.",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "serviceCode",
+          "name",
+          "category",
+          "basePrice",
+          "currency",
+          "isActive",
+          "gstRatePercent",
+          "defaultGovernmentFee",
+          "processingTimeHours",
+          "guestCheckoutEnabled",
+          "requiresDocuments",
+          "uiSchema",
+          "entitled",
+          "entitlementUpdatedAt"
+        ],
+        "description": "A service your organization is entitled to."
+      },
+      "ServiceList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Service"
+        },
+        "description": "Services your organization is entitled to, sorted by serviceCode. A bare array, not wrapped in an object."
+      },
+      "EstampSchemaResponse": {
+        "description": "e-Stamp input field (form-rendering) schema. The backend proxies this from an upstream service and does not define a fixed shape for it, so it is intentionally left unconstrained here.",
+        "x-shape": "passthrough"
+      },
+      "EstampStatesResponse": {
+        "description": "e-Stamp-eligible states. The backend proxies this from an upstream service and does not define a fixed shape for it, so it is intentionally left unconstrained here.",
+        "x-shape": "passthrough"
+      },
+      "EstampInstrumentsResponse": {
+        "description": "Instruments (articles) for a state. The backend proxies this from an upstream service and does not define a fixed shape for it, so it is intentionally left unconstrained here.",
+        "x-shape": "passthrough"
+      },
+      "EstampArticlesResponse": {
+        "description": "Articles for an instrument. The backend proxies this from an upstream service and does not define a fixed shape for it, so it is intentionally left unconstrained here.",
+        "x-shape": "passthrough"
+      },
+      "EstampDutyCalculation": {
+        "description": "Authoritative duty and charge breakdown. Never recalculate or override amounts client-side. The backend proxies this from an upstream service and does not define a fixed shape for it, so it is intentionally left unconstrained here.",
+        "x-shape": "passthrough"
+      },
+      "EstampPartiesResponse": {
+        "description": "Updated party data. The backend proxies this from an upstream service and does not define a fixed shape for it, so it is intentionally left unconstrained here.",
+        "x-shape": "passthrough"
+      },
+      "OrderReference": {
+        "type": "object",
+        "properties": {
+          "externalOrderId": {
+            "type": "string",
+            "description": "Your externalOrderId for the order."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the order was created.",
+            "format": "date-time"
+          },
+          "serviceCode": {
+            "type": "string",
+            "description": "The ordered serviceCode. Omitted when an existing order is returned for a repeated externalOrderId."
+          }
+        },
+        "required": [
+          "externalOrderId",
+          "createdAt"
+        ],
+        "description": "A created order, or the existing order when externalOrderId was already used. Core's own order id is never exposed."
+      },
+      "OrderDetail": {
+        "type": "object",
+        "properties": {
+          "externalOrderId": {
+            "type": "string",
+            "description": "Your externalOrderId."
+          },
+          "order": {
+            "description": "The order as currently held by the order service (upstream-owned shape)."
+          }
+        },
+        "required": [
+          "externalOrderId",
+          "order"
+        ],
+        "description": "An order and its current state."
+      },
+      "OrderStatusResponse": {
+        "type": "object",
+        "properties": {
+          "externalOrderId": {
+            "type": "string",
+            "description": "Your externalOrderId."
+          },
+          "status": {
+            "description": "Current fulfilment status (upstream-owned shape)."
+          }
+        },
+        "required": [
+          "externalOrderId",
+          "status"
+        ],
+        "description": "The current lifecycle status of an order."
+      },
+      "OrderPaymentResponse": {
+        "type": "object",
+        "properties": {
+          "externalOrderId": {
+            "type": "string",
+            "description": "Your externalOrderId."
+          },
+          "payment": {
+            "description": "Payment details for the order (upstream-owned shape)."
+          }
+        },
+        "required": [
+          "externalOrderId",
+          "payment"
+        ],
+        "description": "The payment associated with an order."
+      },
+      "OrderDocumentsResponse": {
+        "type": "object",
+        "properties": {
+          "externalOrderId": {
+            "type": "string",
+            "description": "Your externalOrderId."
+          },
+          "documents": {
+            "description": "Document metadata, no download URLs (upstream-owned shape)."
+          }
+        },
+        "required": [
+          "externalOrderId",
+          "documents"
+        ],
+        "description": "Documents generated for an order."
+      },
+      "DocumentDownloadUrl": {
+        "type": "object",
+        "properties": {
+          "downloadUrl": {
+            "type": "string",
+            "description": "Short-lived presigned URL for the document.",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "description": "When the URL expires (upstream-owned format)."
+          }
+        },
+        "required": [
+          "downloadUrl",
+          "expiresAt"
+        ],
+        "description": "A presigned download URL for one order document."
+      },
+      "PaymentIntent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Payment intent id."
+          },
+          "externalOrderId": {
+            "type": "string",
+            "description": "Your reference for the order being paid."
+          },
+          "coreOrderId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Internal order id, once linked."
+          },
+          "amountMinor": {
+            "type": "integer",
+            "description": "Amount in minor units (paise)."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code."
+          },
+          "status": {
+            "type": "string",
+            "description": "Payment intent status, e.g. CREATED."
+          },
+          "providerIntentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The payment provider's intent/order id."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the intent was created.",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "externalOrderId",
+          "coreOrderId",
+          "amountMinor",
+          "currency",
+          "status",
+          "providerIntentId",
+          "createdAt"
+        ],
+        "description": "A payment intent."
+      },
+      "UsageSummary": {
+        "type": "object",
+        "properties": {
+          "currentPeriod": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "string",
+                "description": "Period start.",
+                "format": "date-time"
+              },
+              "end": {
+                "type": "string",
+                "description": "Period end (exclusive).",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ]
+          },
+          "totalApiRequests": {
+            "type": "integer",
+            "description": "Total metered API requests in the current period."
+          },
+          "callsByService": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Order counts keyed by service code for the current period."
+          },
+          "callsByPeriod": {
+            "type": "array",
+            "description": "Calls per month for the last 6 months, oldest first.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "period": {
+                  "type": "string",
+                  "description": "Month, YYYY-MM.",
+                  "pattern": "^[0-9]{4}-[0-9]{2}$"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "API requests in that month."
+                }
+              },
+              "required": [
+                "period",
+                "count"
+              ]
+            }
+          },
+          "callsByDay": {
+            "type": "array",
+            "description": "Calls per day in the current period.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "day": {
+                  "type": "string",
+                  "description": "Day, YYYY-MM-DD.",
+                  "format": "date"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "API requests on that day."
+                }
+              },
+              "required": [
+                "day",
+                "count"
+              ]
+            }
+          }
+        },
+        "required": [
+          "currentPeriod",
+          "totalApiRequests",
+          "callsByService",
+          "callsByPeriod",
+          "callsByDay"
+        ],
+        "description": "Usage for the organization that owns the API key."
+      },
+      "LogEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Log entry id; also usable as the cursor."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the call was recorded.",
+            "format": "date-time"
+          },
+          "actorType": {
+            "type": "string",
+            "description": "Who made the call, e.g. api_key."
+          },
+          "actorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Id of the actor, if any."
+          },
+          "service": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Service code the call was metered against."
+          },
+          "metadata": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true,
+            "description": "Call metadata (includes a success flag)."
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "actorType",
+          "actorId",
+          "service",
+          "metadata"
+        ],
+        "description": "One request-log entry."
+      },
+      "LogsPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LogEntry"
+            },
+            "description": "Log entries, newest first."
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pass as `cursor` to fetch the next page; null on the last page."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "description": "One page of request logs."
+      },
+      "WebhookEventsPage": {
+        "description": "Page of your organization's webhook delivery attempts. The backend proxies this from an upstream service and does not define a fixed shape for it, so it is intentionally left unconstrained here.",
+        "x-shape": "passthrough"
+      },
+      "WebhookReplayResponse": {
+        "description": "Acknowledgement that the delivery was replayed. The backend proxies this from an upstream service and does not define a fixed shape for it, so it is intentionally left unconstrained here.",
+        "x-shape": "passthrough"
+      },
+      "WebhookEvent": {
+        "type": "object",
+        "properties": {
+          "coreOrderId": {
+            "type": "string",
+            "description": "Internal order id the event is about."
+          },
+          "coreEventType": {
+            "type": "string",
+            "enum": [
+              "ORDER_CREATED",
+              "PAYMENT_CONFIRMED",
+              "FULFILMENT_STARTED",
+              "FULFILMENT_COMPLETED",
+              "ORDER_FAILED",
+              "ORDER_CANCELLED",
+              "REFUND_COMPLETED",
+              "DOCUMENT_READY"
+            ],
+            "description": "The upstream event type; maps 1:1 to the webhook name (ORDER_CREATED = order.created, and so on)."
+          },
+          "occurredAt": {
+            "type": "string",
+            "description": "When the event happened.",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "coreOrderId",
+          "coreEventType",
+          "occurredAt"
+        ],
+        "description": "Outbound webhook body: exactly these three fields followed by the event's own payload fields spread into the same object, so additional properties are expected and the set varies per event type.",
+        "additionalProperties": true
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Stable machine-readable code. See the document's x-error-codes."
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable message. Never contains stack traces or internal details."
+              },
+              "field": {
+                "type": "string",
+                "description": "The input the error points at, when applicable. Only set by flows that need it."
+              },
+              "requestId": {
+                "type": "string",
+                "description": "Correlation id. Echoes your X-Request-Id request header when you send one, otherwise a generated UUID."
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "requestId"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "description": "Every error response from this API has exactly this shape."
+      }
+    },
+    "parameters": {
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": false,
+        "description": "Optional client-generated key (scoped to your organization) that makes a retried POST safe. Retrying with the same key and the same body replays the original result without repeating the work or billing again. Reusing a key with a different body returns 409, except for payment intents, which return the existing intent for that key.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "WebhookSignature": {
+        "name": "X-Webhook-Signature",
+        "in": "header",
+        "required": true,
+        "description": "Hex-encoded HMAC-SHA256(secret, `${timestamp}.${JSON.stringify(payload)}`), where timestamp is the X-Webhook-Timestamp value.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "WebhookTimestamp": {
+        "name": "X-Webhook-Timestamp",
+        "in": "header",
+        "required": true,
+        "description": "Unix time in seconds at which this delivery attempt was signed.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        }
+      },
+      "WebhookEventId": {
+        "name": "X-Webhook-Event-Id",
+        "in": "header",
+        "required": true,
+        "description": "Id of this delivery's event; stable across retries, so use it to de-duplicate.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Request failed validation, or the organization is not entitled to the service.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "BAD_REQUEST",
+                "message": "pan must match the format ABCDE1234F",
+                "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing or invalid API key, or the key lacks the scope this endpoint requires (x-required-scope).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "UNAUTHORIZED",
+                "message": "Missing or invalid API key.",
+                "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+              }
+            }
+          }
+        }
+      },
+      "PaymentRequired": {
+        "description": "Insufficient fulfilment wallet balance to cover this metered call.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "PAYMENT_REQUIRED",
+                "message": "Insufficient fulfilment wallet balance to cover this call.",
+                "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+              }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Valid key, but the request is not allowed: the caller's IP is not on the key's allowlist, or the plan/entitlement is not enabled or its limit is reached.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "FORBIDDEN",
+                "message": "IP not authorized for this API key",
+                "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The requested resource does not exist for your organization.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "NOT_FOUND",
+                "message": "The requested resource was not found.",
+                "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+              }
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "The Idempotency-Key was already used with a different request body, or the resource is in a state that does not allow the action.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "CONFLICT",
+                "message": "This Idempotency-Key was already used with a different request payload",
+                "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+              }
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Rate limit exceeded for this endpoint (fixed window, per API key; sandbox keys get 20% of the production limit, minimum 1). The API sends no Retry-After header: wait for the next window (typically 60 seconds) before retrying.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "TOO_MANY_REQUESTS",
+                "message": "Rate limit exceeded",
+                "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+              }
+            }
+          }
+        }
+      },
+      "BadGateway": {
+        "description": "The upstream service is unreachable or returned an unexpected error. Safe to retry (with the same Idempotency-Key where supported).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "Unable to reach the order/customer service right now",
+                "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+              }
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "A dependency is temporarily unavailable (for example the service catalog, or document downloads for an order). Retry later.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "Service catalog is temporarily unavailable",
+                "requestId": "a1b2c3d4-e5f6-4a1b-8c2d-9f0e1a2b3c4d"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

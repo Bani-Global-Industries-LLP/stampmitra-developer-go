@@ -1,0 +1,18 @@
+{
+  "name": "webhook order.document_ready",
+  "event": "order.document_ready",
+  "operationId": "receiveOrderDocumentReady",
+  "source": "spec-example",
+  "secret": "whsec_test_0123456789abcdef",
+  "now": 1760605200,
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Webhook-Signature": "7b940a3d5ffa4be6ef98c0ab4db1478a02abfe642d6be0b76c9c2bfad58cde06",
+    "X-Webhook-Timestamp": "1760605190",
+    "X-Webhook-Event-Id": "evt_order_document_ready_01"
+  },
+  "rawBody": "{\"coreOrderId\":\"core_order_9f3a1c2b8e4d4a5f\",\"coreEventType\":\"DOCUMENT_READY\",\"occurredAt\":\"2026-09-25T09:05:00.000Z\"}",
+  "expected": {
+    "valid": true
+  }
+}

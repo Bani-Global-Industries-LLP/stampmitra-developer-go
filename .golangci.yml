@@ -1,0 +1,34 @@
+version: "2"
+run:
+  go: "1.21"
+  tests: true
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - errorlint
+    - gosec
+    - misspell
+    - nilerr
+    - noctx
+    - revive
+    - unconvert
+    - unparam
+  exclusions:
+    generated: lax
+    rules:
+      - path: _test\.go
+        linters: [gosec, unparam, revive, errorlint, noctx, errcheck, bodyclose]
+      - path: examples/
+        linters: [gosec, revive, noctx, errcheck, bodyclose]
+  settings:
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+        - name: error-naming
+        - name: error-return
+        - name: receiver-naming
+formatters:
+  enable:
+    - gofmt

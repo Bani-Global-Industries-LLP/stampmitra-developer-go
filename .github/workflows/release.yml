@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub release; Go needs no registry credentials
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Bani-Global-Industries-LLP/stampmitra-developer-openapi
+          path: .openapi
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tag matches stampmitra.Version
+        run: |
+          v="$(sed -n 's/^const Version = "\(.*\)"$/\1/p' version.go)"
+          test -n "$v" && test "v$v" = "${GITHUB_REF_NAME}" || { echo "Tag ${GITHUB_REF_NAME} does not match Version v$v"; exit 1; }
+      - run: go vet ./...
+      - run: go test -race -count=1 ./...
+      - run: go test -tags conformance -race -count=1 ./...
+        env:
+          STAMPMITRA_SPEC_DIR: ${{ github.workspace }}/.openapi
+          CONFORMANCE_REQUIRED: '1'
+      # Inert until the maintainer sets the repository variable RELEASE_ENABLED=true (see RELEASING.md).
+      - name: GitHub release
+        if: ${{ vars.RELEASE_ENABLED == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" --generate-notes --title "${GITHUB_REF_NAME}" --verify-tag
+      # Ask the module proxy to fetch the tag now so pkg.go.dev indexes it promptly. The module path
+      # has capital letters, which the proxy protocol writes as "!" + lower-case letter.
+      - name: Prime proxy.golang.org
+        if: ${{ vars.RELEASE_ENABLED == 'true' }}
+        run: |
+          curl -fsS "https://proxy.golang.org/github.com/!bani-!global-!industries-!l!l!p/stampmitra-developer-go/@v/${GITHUB_REF_NAME}.info" || echo "proxy not ready yet; it will fetch on first go get"

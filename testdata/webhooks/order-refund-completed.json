@@ -1,0 +1,18 @@
+{
+  "name": "webhook order.refund_completed",
+  "event": "order.refund_completed",
+  "operationId": "receiveOrderRefundCompleted",
+  "source": "spec-example",
+  "secret": "whsec_test_0123456789abcdef",
+  "now": 1760605200,
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Webhook-Signature": "8585ceeda7c733f681badc7e5f19b5bb2910b5ed42113db5e0717868801575e2",
+    "X-Webhook-Timestamp": "1760605190",
+    "X-Webhook-Event-Id": "evt_order_refund_completed_01"
+  },
+  "rawBody": "{\"coreOrderId\":\"core_order_9f3a1c2b8e4d4a5f\",\"coreEventType\":\"REFUND_COMPLETED\",\"occurredAt\":\"2026-09-25T09:05:00.000Z\"}",
+  "expected": {
+    "valid": true
+  }
+}
