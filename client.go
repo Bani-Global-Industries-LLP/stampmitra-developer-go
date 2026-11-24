@@ -30,11 +30,15 @@ type Client struct {
 	Verify   *VerifyService
 	Services *ServicesService
 	Estamp   *EstampService
-	Orders   *OrdersService
-	Payments *PaymentsService
-	Usage    *UsageService
-	Logs     *LogsService
-	Webhooks *WebhooksService
+	Account  *AccountService
+	// StampDutyWallet pays the government duty of e-Stamp orders; ServiceFeeWallet pays StampMitra's service charges.
+	StampDutyWallet  *StampDutyWalletService
+	ServiceFeeWallet *ServiceFeeWalletService
+	Orders           *OrdersService
+	Payments         *PaymentsService
+	Usage            *UsageService
+	Logs             *LogsService
+	Webhooks         *WebhooksService
 
 	apiKey     secret
 	baseURL    string
@@ -128,7 +132,10 @@ func NewClient(apiKey string, opts ...Option) (*Client, error) {
 	c.logger = cfg.logger
 	c.Verify = &VerifyService{c}
 	c.Services = &ServicesService{c}
-	c.Estamp = &EstampService{c}
+	c.Estamp = &EstampService{c: c, Orders: &EstampOrdersService{c}, Stamps: &EstampStampsService{c}}
+	c.Account = &AccountService{c}
+	c.StampDutyWallet = &StampDutyWalletService{c}
+	c.ServiceFeeWallet = &ServiceFeeWalletService{c}
 	c.Orders = &OrdersService{c}
 	c.Payments = &PaymentsService{Intents: &PaymentIntentsService{c}}
 	c.Usage = &UsageService{c}

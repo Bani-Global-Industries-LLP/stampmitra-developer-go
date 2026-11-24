@@ -54,8 +54,8 @@ func templateRegexp(tmpl string) *regexp.Regexp {
 //	go test -run TestSpecCoverage .
 func TestSpecCoverage(t *testing.T) {
 	ops := loadSpecOps(t, "spec/openapi.json")
-	if len(ops) != 31 {
-		t.Fatalf("spec has %d operations, expected 31", len(ops))
+	if len(ops) != 62 {
+		t.Fatalf("spec has %d operations, expected 62", len(ops))
 	}
 	cases := operationCases()
 	if len(cases) != len(ops) {
@@ -63,7 +63,7 @@ func TestSpecCoverage(t *testing.T) {
 	}
 
 	env := newEnv(t, func(n int, w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/v1/services" {
+		if r.URL.Path == "/v1/services" || strings.HasSuffix(r.URL.Path, "/districts") || strings.HasSuffix(r.URL.Path, "/sros") {
 			writeJSON(w, 200, `[]`)
 			return
 		}
@@ -126,7 +126,7 @@ func TestSpecCoverageDetectsMissingOperation(t *testing.T) {
 			}
 		}
 	}
-	if covered["GET /v1/brand-new"] || len(covered) != 31 {
+	if covered["GET /v1/brand-new"] || len(covered) != 62 {
 		t.Fatalf("coverage check cannot detect a new operation (covered %d)", len(covered))
 	}
 }
@@ -152,7 +152,7 @@ func TestBundledSpecMatchesUpstream(t *testing.T) {
 
 func TestPostsCarryIdempotencyKeysExceptReplay(t *testing.T) {
 	env := newEnv(t, func(n int, w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/v1/services" {
+		if r.URL.Path == "/v1/services" || strings.HasSuffix(r.URL.Path, "/districts") || strings.HasSuffix(r.URL.Path, "/sros") {
 			writeJSON(w, 200, `[]`)
 			return
 		}
@@ -171,8 +171,12 @@ func TestPostsCarryIdempotencyKeysExceptReplay(t *testing.T) {
 			if !uuid.MatchString(key) {
 				t.Errorf("%s: Idempotency-Key = %q", tc.Name, key)
 			}
-			if r.Header.Get("Content-Type") != "application/json" {
-				t.Errorf("%s: Content-Type = %q", tc.Name, r.Header.Get("Content-Type"))
+			want := "application/json"
+			if tc.Multipart {
+				want = "multipart/form-data"
+			}
+			if got := strings.SplitN(r.Header.Get("Content-Type"), ";", 2)[0]; got != want {
+				t.Errorf("%s: Content-Type = %q", tc.Name, got)
 			}
 		default:
 			if key != "" {

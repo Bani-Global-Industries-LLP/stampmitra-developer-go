@@ -22,7 +22,8 @@ var identifierKeys = toSet("pan", "gstin", "accountnumber", "ifsc", "cin", "udya
 // personalKeys hold personal data and are removed entirely.
 var personalKeys = toSet("name", "businessname", "registeredname", "fathername", "ownername", "ownerfathername",
 	"nameatbank", "fatherorhusbandname", "companyname", "tradename", "legalname", "dob", "address",
-	"principalplaceofbusiness", "enterprisename", "customername", "partyname", "partyaddress", "downloadurl", "certificateurl")
+	"principalplaceofbusiness", "enterprisename", "customername", "partyname", "partyaddress", "downloadurl", "certificateurl",
+	"fatherhusbandname", "firstparty", "secondparty", "pancardimage", "payerphone", "filename")
 
 func toSet(keys ...string) map[string]struct{} {
 	m := make(map[string]struct{}, len(keys))

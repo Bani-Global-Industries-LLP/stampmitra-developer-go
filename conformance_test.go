@@ -164,11 +164,11 @@ func (e *confEnv) recorded() []mockRequest {
 
 func scenario(s string) RequestOption { return WithRequestHeader("x-mock-scenario", s) }
 
-// ---- all 31 operations ------------------------------------------------------------------------
+// ---- all 62 operations ------------------------------------------------------------------------
 
 func TestConformanceEveryOperation(t *testing.T) {
 	cases := operationCases()
-	if len(cases) != 31 {
+	if len(cases) != 62 {
 		t.Fatalf("%d operations", len(cases))
 	}
 	uuid := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
@@ -216,7 +216,7 @@ func TestConformanceFixtureBodiesRoundTrip(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			name := fixtureName(tc.Method, tc.Path)
+			name := fixtureName(t, tc.Method, tc.Path)
 			raw, err := os.ReadFile(filepath.Join(dir, "fixtures", "operations", name+".success.json"))
 			if err != nil {
 				t.Skip("no fixture " + name)
@@ -245,63 +245,22 @@ func TestConformanceFixtureBodiesRoundTrip(t *testing.T) {
 	}
 }
 
-func fixtureName(method, path string) string {
-	segs := strings.Split(strings.Trim(path, "/"), "/")
-	// path params in the table are concrete; fixtures use template names, so map the known ones
-	repl := map[string]string{"ord_123": "orderid", "o1": "id", "doc_1": "documentid", "pi_1": "id", "evt_1": "id", "MH": "statecode", "rent_agreement": "instrumentcode"}
-	for i, s := range segs {
-		if r, ok := repl[s]; ok {
-			// o1 is documentid? no: first occurrence under /orders is id
-			segs[i] = r
-		} else if strings.HasPrefix(s, "estamp.") {
-			segs[i] = "servicecode"
+// fixtureName maps a concrete request path to the spec template (the most specific match) and from
+// there to the fixture file prefix, e.g. GET /v1/estamp/orders/{id} -> get-v1-estamp-orders-id.
+func fixtureName(t testing.TB, method, path string) string {
+	best := ""
+	for _, op := range loadSpecOps(t, "spec/openapi.json") {
+		if op.Method == method && templateRegexp(op.Template).MatchString(path) {
+			if best == "" || strings.Count(op.Template, "{") < strings.Count(best, "{") {
+				best = op.Template
+			}
 		}
+	}
+	segs := strings.Split(strings.Trim(best, "/"), "/")
+	for i, s := range segs {
+		segs[i] = strings.ToLower(strings.Trim(s, "{}"))
 	}
 	return strings.ToLower(method) + "-" + strings.Join(segs, "-")
-}
-
-// prune drops nulls and empty strings so omitted-vs-null/empty differences do not matter.
-func prune(v any) any {
-	switch t := v.(type) {
-	case map[string]any:
-		out := map[string]any{}
-		for k, x := range t {
-			if x == nil || x == "" {
-				continue
-			}
-			out[k] = prune(x)
-		}
-		return out
-	case []any:
-		out := make([]any, len(t))
-		for i, x := range t {
-			out[i] = prune(x)
-		}
-		return out
-	}
-	return v
-}
-
-func extraOf(v any) map[string]json.RawMessage {
-	rv := reflect.ValueOf(v)
-	for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
-		if rv.IsNil() {
-			return nil
-		}
-		rv = rv.Elem()
-	}
-	if rv.Kind() == reflect.Slice && rv.Len() > 0 {
-		rv = rv.Index(0)
-	}
-	if rv.Kind() != reflect.Struct {
-		return nil
-	}
-	f := rv.FieldByName("Extra")
-	if !f.IsValid() {
-		return nil
-	}
-	m, _ := f.Interface().(map[string]json.RawMessage)
-	return m
 }
 
 // ---- errors -----------------------------------------------------------------------------------
@@ -341,14 +300,14 @@ func TestConformanceRateLimitHeaders(t *testing.T) {
 		t.Fatalf("with Retry-After: %v", err)
 	}
 
-	// documented 429 fixture, served without Retry-After: computed backoff, RetryAfter is zero
+	// contract 1.2.0: the documented 429 fixture carries Retry-After: 1, which beats the computed backoff
 	e = conf(t, WithMaxRetries(1))
 	_, err = e.c.Estamp.ListStates(context.Background(), scenario("error-429"))
-	if !errors.As(err, &api) || api.RetryAfter != 0 || !IsRateLimit(err) {
-		t.Fatalf("without Retry-After: %v (%+v)", err, api)
+	if !errors.As(err, &api) || api.RetryAfter != time.Second || !IsRateLimit(err) {
+		t.Fatalf("documented 429: %v (%+v)", err, api)
 	}
-	if len(e.sleeps) != 1 || e.sleeps[0] > 500*time.Millisecond {
-		t.Fatalf("backoff = %v", e.sleeps)
+	if len(e.sleeps) != 1 || e.sleeps[0] != time.Second {
+		t.Fatalf("delay = %v", e.sleeps)
 	}
 
 	// Retry-After beats the computed backoff
@@ -363,19 +322,6 @@ func TestConformanceRateLimitHeaders(t *testing.T) {
 }
 
 // ---- shared retry scenarios ---------------------------------------------------------------------
-
-type retryScenario struct {
-	Name                           string          `json:"name"`
-	Method                         string          `json:"method"`
-	Path                           string          `json:"path"`
-	IdempotencyKey                 json.RawMessage `json:"idempotencyKey"`
-	MaxRetries                     *int            `json:"maxRetries"`
-	Sequence                       []any           `json:"sequence"`
-	ExpectedAttempts               int             `json:"expectedAttempts"`
-	SameIdempotencyKeyAcrossAlways bool            `json:"sameIdempotencyKeyAcrossAttempts"`
-	Outcome                        any             `json:"outcome"`
-	Optional                       bool            `json:"optional"`
-}
 
 func TestConformanceSharedRetryScenarios(t *testing.T) {
 	raw, err := os.ReadFile("testdata/retry-scenarios.json")
@@ -396,6 +342,12 @@ func TestConformanceSharedRetryScenarios(t *testing.T) {
 		t.Run(s.Name, func(t *testing.T) {
 			var items []string
 			for _, it := range s.Sequence {
+				if strings.Contains(fmt.Sprint(s.Outcome), "retryAfter=") || fmt.Sprint(it) == "409" {
+					t.Skip("needs a scripted header or non-in-progress 409: replayed against httptest in TestRetryScenariosReplay")
+				}
+				if m, ok := it.(map[string]any); ok && m["body"] != nil {
+					t.Skip("needs a scripted response body: replayed against httptest in TestRetryScenariosReplay")
+				}
 				switch v := it.(type) {
 				case string:
 					if v == "timeout" {
@@ -413,7 +365,8 @@ func TestConformanceSharedRetryScenarios(t *testing.T) {
 				maxRetries = *s.MaxRetries
 			}
 			e := conf(t, WithMaxRetries(maxRetries))
-			isReplay := strings.HasSuffix(s.Path, "/replay")
+			pol := scenarioPolicy(s)
+			isReplay := pol == retryNever
 			opts := []RequestOption{scenario("seq:" + strings.ReplaceAll(s.Name, ":", "_") + ":" + strings.Join(items, ","))}
 			if string(s.IdempotencyKey) == "true" {
 				opts = append(opts, WithIdempotencyKey("caller-key-1"))
@@ -429,13 +382,16 @@ func TestConformanceSharedRetryScenarios(t *testing.T) {
 			wantAttempts := s.ExpectedAttempts
 			wantOutcome := s.Outcome
 			keyed := string(s.IdempotencyKey) != "false" || autoKey
-			if s.Method == "POST" && !isReplay && string(s.IdempotencyKey) == "false" {
+			if pol == retrySafe {
+				wantAttempts, wantOutcome = simulate(items, maxRetries)
+			}
+			if s.Method == "POST" && !isReplay && pol != retrySafe && string(s.IdempotencyKey) == "false" {
 				wantAttempts, wantOutcome = simulate(items, maxRetries)
 			}
 			_ = keyed
 
 			var out GenericResponse
-			err := e.c.do(context.Background(), s.Method, s.Path, nil, body, &out, autoKey, opts)
+			err := e.c.doWith(context.Background(), s.Method, s.Path, nil, body, &out, autoKey && !isReplay, pol, opts)
 			checkOutcome(t, err, wantOutcome)
 
 			var mine []mockRequest
@@ -472,74 +428,6 @@ func TestConformanceSharedRetryScenarios(t *testing.T) {
 	}
 }
 
-// simulate computes the attempts and outcome for a sequence with a retry-safe request.
-func simulate(items []string, maxRetries int) (int, any) {
-	for i := 0; ; i++ {
-		item := items[minInt(i, len(items)-1)]
-		switch item {
-		case "conn", "429", "502", "503", "504":
-			if i >= maxRetries {
-				if item == "conn" {
-					return i + 1, "ConnectionError"
-				}
-				return i + 1, fmt.Sprintf("status=%s", item)
-			}
-		default:
-			if strings.HasPrefix(item, "2") {
-				return i + 1, 200
-			}
-			return i + 1, "status=" + item
-		}
-	}
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-var outcomeSentinel = map[string]error{
-	"UpstreamError": ErrUpstream, "RateLimitError": ErrRateLimit, "NotFoundError": ErrNotFound, "ValidationError": ErrValidation,
-	"AuthenticationError": ErrAuthentication, "PermissionError": ErrPermission, "ConflictError": ErrConflict,
-	"TimeoutError": ErrTimeout, "ConnectionError": ErrConnection,
-}
-
-func checkOutcome(t *testing.T, err error, outcome any) {
-	t.Helper()
-	switch o := outcome.(type) {
-	case float64, int:
-		if err != nil {
-			t.Fatalf("want success, got %v", err)
-		}
-	case string:
-		if err == nil {
-			t.Fatalf("want %s, got success", o)
-		}
-		if strings.HasPrefix(o, "status=") {
-			var api *APIError
-			if !errors.As(err, &api) || fmt.Sprint(api.Status) != strings.TrimPrefix(o, "status=") {
-				t.Fatalf("want %s, got %v", o, err)
-			}
-			return
-		}
-		name := regexp.MustCompile(`\(.*$`).ReplaceAllString(o, "")
-		sentinel, ok := outcomeSentinel[name]
-		if !ok || !errors.Is(err, sentinel) {
-			t.Fatalf("want %s, got %v", o, err)
-		}
-		if m := regexp.MustCompile(`\((\d{3})\)`).FindStringSubmatch(o); m != nil {
-			var api *APIError
-			if !errors.As(err, &api) || fmt.Sprint(api.Status) != m[1] {
-				t.Fatalf("want status %s, got %v", m[1], err)
-			}
-		}
-	default:
-		t.Fatalf("unknown outcome %v", outcome)
-	}
-}
-
 // ---- idempotency through the real resource methods -----------------------------------------------
 
 func TestConformanceIdempotencyKeyReuse(t *testing.T) {
@@ -572,7 +460,7 @@ func TestConformanceIdempotencyKeyReuse(t *testing.T) {
 }
 
 func TestConformanceNoRetryOn4xxPost(t *testing.T) {
-	for _, st := range []int{400, 401, 402, 403, 404, 409} {
+	for _, st := range []int{400, 401, 402, 403, 404} {
 		e := conf(t)
 		_, err := e.c.Verify.PAN(context.Background(), &PANVerifyParams{PAN: "ABCDE1234F"}, scenario(fmt.Sprintf("seq:x%d:%d,200", st, st)))
 		if err == nil {
@@ -606,6 +494,22 @@ func TestConformanceTimeoutRetriedForGetThenReported(t *testing.T) {
 	}
 	if n := len(e.recorded()); n != 2 {
 		t.Fatalf("attempts = %d", n)
+	}
+}
+
+// The mock's 409 fixtures are IDEMPOTENCY_IN_PROGRESS with Retry-After: 1: a keyed POST waits that long
+// and re-sends the same request with the same key.
+func TestConformance409InProgressIsRetriedAfterRetryAfter(t *testing.T) {
+	e := conf(t)
+	if _, err := e.c.Estamp.Orders.Create(context.Background(), testOrderParams, scenario("seq:inprog:409,201")); err != nil {
+		t.Fatal(err)
+	}
+	reqs := e.recorded()
+	if len(reqs) != 2 || reqs[0].Headers["idempotency-key"] == "" || reqs[0].Headers["idempotency-key"] != reqs[1].Headers["idempotency-key"] {
+		t.Fatalf("reqs: %+v", reqs)
+	}
+	if len(e.sleeps) != 1 || e.sleeps[0] != time.Second {
+		t.Fatalf("sleeps = %v", e.sleeps)
 	}
 }
 
@@ -743,5 +647,101 @@ func TestConformanceVendoredVectorsMatchUpstream(t *testing.T) {
 		if err != nil || !bytes.Equal(up, local) {
 			t.Errorf("webhook fixture %s out of sync", filepath.Base(f))
 		}
+	}
+}
+
+// TestConformanceEveryFixtureScenario asks the mock for every golden scenario of every operation
+// (success, success-2xx, error-N: 411 fixtures) and checks the SDK's decoding or error mapping.
+func TestConformanceEveryFixtureScenario(t *testing.T) {
+	byKey := casesByTemplate(t)
+	n := 0
+	for _, fx := range loadFixtureFiles(t) {
+		fx := fx
+		tc := byKey[fx.Operation.Method+" "+fx.Operation.Path]
+		n++
+		t.Run(tc.Name+"/"+fx.Scenario, func(t *testing.T) {
+			e := conf(t, WithMaxRetries(0))
+			res, err := tc.Call(context.Background(), e.c, scenario(fx.Scenario))
+			if fx.Response.Status < 300 {
+				if err != nil || res == nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			var api *APIError
+			if !errors.As(err, &api) || api.Status != fx.Response.Status {
+				t.Fatalf("got %v", err)
+			}
+		})
+	}
+	if n != 411 {
+		t.Fatalf("%d fixtures", n)
+	}
+}
+
+func TestConformanceUploadIsMultipartAndKeyed(t *testing.T) {
+	e := conf(t)
+	if _, err := e.c.Estamp.Orders.UploadDocument(context.Background(), "estord_9", &EstampDocumentUploadParams{File: strings.NewReader(testPDF), FileName: "pan.pdf", Type: DocumentTypePANCard}); err != nil {
+		t.Fatal(err)
+	}
+	r := e.recorded()[0]
+	if !strings.HasPrefix(r.Headers["content-type"], "multipart/form-data; boundary=") || r.Headers["idempotency-key"] == "" {
+		t.Fatalf("headers %v", r.Headers)
+	}
+	var body struct {
+		Multipart []struct {
+			Name, Filename, ContentType, Value string
+			Size                               int
+		} `json:"multipart"`
+	}
+	if err := json.Unmarshal(r.Body, &body); err != nil || len(body.Multipart) != 2 {
+		t.Fatalf("%v %s", err, r.Body)
+	}
+	if p := body.Multipart[0]; p.Name != "file" || p.Filename != "pan.pdf" || p.ContentType != "application/pdf" || p.Size != len(testPDF) {
+		t.Errorf("file part %+v", p)
+	}
+	if p := body.Multipart[1]; p.Name != "type" || p.Value != "pan_card" {
+		t.Errorf("type part %+v", p)
+	}
+}
+
+func TestConformanceNeverRetryOperations(t *testing.T) {
+	ctx := context.Background()
+	for name, call := range map[string]func(e *confEnv, s RequestOption) error{
+		"order cancel": func(e *confEnv, s RequestOption) error {
+			_, err := e.c.Estamp.Orders.Cancel(ctx, "estord_1", s)
+			return err
+		},
+		"stamp cancel": func(e *confEnv, s RequestOption) error {
+			_, err := e.c.Estamp.Stamps.Cancel(ctx, "eststamp_1", s)
+			return err
+		},
+		"replace": func(e *confEnv, s RequestOption) error {
+			_, err := e.c.Estamp.Stamps.Replace(ctx, "eststamp_1", s)
+			return err
+		},
+		"pan-card": func(e *confEnv, s RequestOption) error {
+			_, err := e.c.Estamp.Stamps.SetPANCard(ctx, "eststamp_1", &EstampPANCardParams{PANCardImage: "https://x.example/p.jpg"}, s)
+			return err
+		},
+		"stamp duty top-up": func(e *confEnv, s RequestOption) error {
+			_, err := e.c.StampDutyWallet.Topup(ctx, &WalletTopupParams{BaseAmount: 100}, s)
+			return err
+		},
+		"service fee top-up": func(e *confEnv, s RequestOption) error {
+			_, err := e.c.ServiceFeeWallet.Topup(ctx, &WalletTopupParams{BaseAmount: 100}, s)
+			return err
+		},
+	} {
+		e := conf(t)
+		err := call(e, scenario("seq:nr"+strings.ReplaceAll(name, " ", "")+":503,200"))
+		if !IsUpstream(err) || len(e.recorded()) != 1 || e.recorded()[0].Headers["idempotency-key"] != "" {
+			t.Errorf("%s: %v, %d attempts", name, err, len(e.recorded()))
+		}
+	}
+	// validate is a dry run: retried without a key
+	e := conf(t)
+	if _, err := e.c.Estamp.Orders.Validate(ctx, testOrderParams, scenario("seq:val:503,200")); err != nil || len(e.recorded()) != 2 {
+		t.Fatalf("%v %d", err, len(e.recorded()))
 	}
 }

@@ -122,10 +122,6 @@ func callWith[T any](ctx context.Context, c *Client, method, path string, query 
 	return &out, nil
 }
 
-func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, out any, autoKey bool, opts []RequestOption) error {
-	return c.doWith(ctx, method, path, query, body, out, autoKey, retryDefault, opts)
-}
-
 func (c *Client) doWith(ctx context.Context, method, path string, query url.Values, body, out any, autoKey bool, pol retryPolicy, opts []RequestOption) error {
 	if ctx == nil {
 		return &ValidationError{Message: "context must not be nil"}
@@ -215,7 +211,7 @@ func (c *Client) doWith(ctx context.Context, method, path string, query url.Valu
 			retryAfter = apiErr.RetryAfter
 			err = apiErr
 			c.captureRaw(&rc, status, hdr, respBody, attempt+1, apiErr.RequestID)
-			if !isRetryableStatus(status) && !(canRetry && isIdempotencyInProgress(apiErr)) {
+			if !isRetryableStatus(status) && (!canRetry || !isIdempotencyInProgress(apiErr)) {
 				return err
 			}
 		} else {
