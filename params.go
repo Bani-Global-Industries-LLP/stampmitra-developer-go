@@ -68,9 +68,9 @@ type PANToGSTINParams struct {
 	PAN string `json:"pan"`
 }
 
-// PANToUdyamParams: Resolve a PAN to its Udyam registration(s).
+// PANToUdyamParams: Resolve a PAN to its Udyam registration.
 type PANToUdyamParams struct {
-	// The PAN to look associated Udyam registration(s) up for.
+	// The PAN to look the associated Udyam registration up for.
 	PAN string `json:"pan"`
 }
 
@@ -144,4 +144,90 @@ type CreatePaymentIntentParams struct {
 	Currency string `json:"currency"`
 	// Id of one of your active payment connections.
 	PaymentConnectionID string `json:"paymentConnectionId"`
+}
+
+// EstampOrderParams: Body of POST /v1/estamp/orders/validate and POST /v1/estamp/orders. Both routes take exactly this body.
+type EstampOrderParams struct {
+	// Your own reference for the whole order. Distinct from the Idempotency-Key header: the reference is for your lookup (it appears on each order in the list), the header is what makes a retried create safe.
+	Reference string `json:"reference,omitempty"`
+	// One to 5000 stamp lines. All lines of one order must share one state (otherwise MIXED_STATE). Sandbox orders hold at most 100 stamps.
+	Stamps []EstampStampLine `json:"stamps"`
+}
+
+// EstampPANCardParams: Body of POST /v1/estamp/stamps/{stampId}/pan-card.
+type EstampPANCardParams struct {
+	// https link to the stamp-duty payer's PAN card (JPG, PNG, WebP, GIF, HEIC or PDF) on the default port, downloadable without a login. A new link replaces any earlier one.
+	PANCardImage string `json:"panCardImage"`
+}
+
+// WalletTopupParams: Body of a wallet top-up. The wallet is credited with exactly this amount when the payment succeeds.
+type WalletTopupParams struct {
+	// The amount you want in the wallet, in rupees, without any fee or tax. Must be a positive number.
+	BaseAmount float64 `json:"baseAmount"`
+}
+
+// EstampParty: One party to the instrument. Unknown properties are rejected with UNKNOWN_FIELD.
+type EstampParty struct {
+	// Full name of the party, as on the identity document.
+	Name string `json:"name"`
+	// The party's address. Required by states that report firstPartyAddressRequired.
+	Address string `json:"address,omitempty"`
+	// The party's phone number. Accepted, but the issuing process contacts StampMitra operations, not your customer.
+	Phone string `json:"phone,omitempty"`
+	// Father's or husband's name. Required by states that report fatherHusbandNameRequired.
+	FatherHusbandName string `json:"fatherHusbandName,omitempty"`
+	// The party's gender.
+	Gender string `json:"gender,omitempty"`
+}
+
+// EstampPropertyArea: Property area. A free-text string such as "850 sq ft" is still read by the API where it can be understood, but it is deprecated: send this object.
+type EstampPropertyArea struct {
+	// Exactly one of the four spellings: Square Feet, Square Yard, Square Meters, Not Applicable. Any other spelling (for example sq ft) is rejected with INVALID_UNIT.
+	Unit string `json:"unit"`
+	// Area in the chosen unit. Required, and greater than 0, unless the unit is Not Applicable.
+	Value float64 `json:"value,omitempty"`
+}
+
+// EstampStampLine: One stamp line of an e-Stamp order. Unknown properties are rejected with UNKNOWN_FIELD.
+type EstampStampLine struct {
+	// Your own reference for this stamp line, echoed back on the created order's stamps[].
+	ClientReference string `json:"clientReference,omitempty"`
+	// State this stamp is issued in, as a code from GET /v1/estamp/states (case-insensitive). One order covers exactly one state.
+	State string `json:"state"`
+	// Stamp category.
+	Category string `json:"category,omitempty"`
+	// Article code identifying the instrument, as returned by GET /v1/estamp/states/{stateCode}/instruments. Codes are scoped to their state.
+	ArticleCode string `json:"articleCode"`
+	// Requested stamp duty denomination in rupees. The authoritative duty is computed by StampMitra and is never overridden by this value.
+	Denomination float64 `json:"denomination"`
+	// The party paying the stamp duty: that party's name, FIRST_PARTY or SECOND_PARTY (SECOND_PARTY needs a second party). Anything else is rejected with PAYER_NOT_A_PARTY.
+	StampDutyPayer string `json:"stampDutyPayer,omitempty"`
+	// The payer's phone number.
+	PayerPhone string `json:"payerPhone,omitempty"`
+	// The payer's gender. A state can require it above a face value; see the requirements route.
+	PayerGender string `json:"payerGender,omitempty"`
+	// First party to the instrument: an EstampParty object, or a bare name string (treated as { name }). Use the object whenever the state wants an address or a father's or husband's name. An array is rejected with PARTY_MUST_BE_OBJECT.
+	FirstParty Party `json:"firstParty"`
+	// Second party, when the article is not single-party (isSecondPartyNA false). Same two forms as firstParty.
+	SecondParty *Party `json:"secondParty,omitempty"`
+	// Purpose or nature of the instrument.
+	Purpose string `json:"purpose,omitempty"`
+	// District code, when the state requires one (GET /v1/estamp/states/{stateCode}/districts).
+	District string `json:"district,omitempty"`
+	// Sub-registrar office value, when the state requires one (GET .../districts/{districtCode}/sros, the value field).
+	SRO string `json:"sro,omitempty"`
+	// Cess amount in rupees, when it applies to the article.
+	CessAmount float64 `json:"cessAmount,omitempty"`
+	// Property area { unit, value }. Needed when the state's propertyAreaRequired flag is true.
+	PropertyArea *EstampPropertyArea `json:"propertyArea,omitempty"`
+	// https link to the stamp-duty payer's PAN card (JPG, PNG, WebP, GIF, HEIC or PDF) on the default port, with no credentials, downloadable without a login. Optional and advisory: it never blocks an order. You can also send or replace it later with POST /v1/estamp/stamps/{stampId}/pan-card, or upload the file with POST /v1/estamp/orders/{orderId}/documents.
+	PANCardImage string `json:"panCardImage,omitempty"`
+	// Your own cost-centre tag, for internal cost allocation.
+	CostCentre string `json:"costCentre,omitempty"`
+	// Your own business-unit tag.
+	BusinessUnit string `json:"businessUnit,omitempty"`
+	// Reference to a related or linked document, when this stamp attaches to one.
+	LinkedDocRef string `json:"linkedDocRef,omitempty"`
+	// Number of identical stamps to generate for this line (1 to 1000). Defaults to 1. A line with quantity 2 is two papers for pricing.
+	Quantity int64 `json:"quantity,omitempty"`
 }

@@ -5,20 +5,20 @@
 [![Go version](https://img.shields.io/badge/go-1.21%2B-00ADD8)](go.mod)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-> The pkg.go.dev badge shows documentation only once the first version tag (v0.1.0) is published.
+> The pkg.go.dev badge shows documentation only once the first version tag (v0.2.0) is published.
 
 Official Go client for the [StampMitra Developer API](https://developer.stampmitra.in/docs):
 Indian identity verification (PAN, GSTIN, vehicle RC, Voter ID, driving licence, passport, CIN, Udyam, bank account)
 and e-Stamp Paper. OpenAPI spec: <https://developer.stampmitra.in/openapi.json>.
 
-> **Status: pre-1.0 (0.1.0).** The API surface may change in minor releases. Pin your version.
+> **Status: pre-1.0 (0.2.0).** The API surface may change in minor releases. Pin your version.
 
 SDK guide: <https://developer.stampmitra.in/sdks/go> | API docs: <https://developer.stampmitra.in/docs>
 
 ## Install
 
 ```bash
-go get github.com/Bani-Global-Industries-LLP/stampmitra-developer-go@v0.1.0
+go get github.com/Bani-Global-Industries-LLP/stampmitra-developer-go@v0.2.0
 ```
 
 Requires Go 1.21 or newer (CI runs 1.21, 1.22, 1.23 and 1.24). No third-party dependencies: the standard library only.
@@ -84,7 +84,11 @@ Every method takes a `context.Context` first and accepts per-call options last: 
 |---|---|
 | `client.Verify` | `PAN`, `GSTIN`, `RC`, `VoterID`, `DrivingLicense`, `Passport`, `CIN`, `Udyam`, `PANToGSTIN`, `PANToUdyam`, `BankAccount` |
 | `client.Services` | `List`, `Get` |
-| `client.Estamp` | `GetSchema`, `ListStates`, `ListInstruments`, `ListArticles`, `CalculateDuty`, `AddParties` |
+| `client.Estamp` | `GetSchema`, `ListStates`, `GetStatesAvailability`, `GetState`, `GetStateRequirements`, `ListDistricts`, `ListSROs`, `ListInstruments`, `ListArticles`, `CalculateDuty`, `AddParties`, `GetWallet` |
+| `client.Estamp.Orders` | `Validate`, `Create`, `List`, `ListAll` (iterator), `Get`, `Cancel`, `Export`, `ListStamps`, `UploadDocument` |
+| `client.Estamp.Stamps` | `Get`, `Cancel`, `Replace`, `SetPANCard`, `GetCertificate` |
+| `client.StampDutyWallet`, `client.ServiceFeeWallet` | `GetBalance`, `Topup`, `ListTransactions`, `ListAllTransactions`, `ListInvoices`, `ListAllInvoices`, `GetInvoice` |
+| `client.Account` | `GetBalance`, `GetUsage` |
 | `client.Orders` | `Create`, `Get`, `GetStatus`, `GetPayment`, `ListDocuments`, `GetDocumentDownload` |
 | `client.Payments.Intents` | `Create`, `Get` |
 | `client.Usage` | `Summary` |
@@ -139,6 +143,99 @@ replay, err := client.Webhooks.Events.Replay(ctx, "evt_1")
 Create returns `externalOrderId` (there is no `id`); pass it to `Get`, `GetStatus`, `GetPayment`, `ListDocuments`,
 `GetDocumentDownload` and `Estamp.AddParties`.
 
+### e-Stamp orders
+
+An order is one state and up to 5000 stamp lines (`Quantity` up to 1000 per line). The flow is validate, create, optionally
+upload the payer's PAN card, then read the stamps and their certificates. Order ids here are the ids the API returns
+(`estord_...`), not your `externalOrderId`.
+
+```go
+second := stampmitra.PartyName("John Smith") // SecondParty is a *Party: nil when the article has one party
+order := &stampmitra.EstampOrderParams{
+	Reference: "order-2026-0917", // your own reference; distinct from the Idempotency-Key
+	Stamps: []stampmitra.EstampStampLine{{
+		ClientReference: "line-001",
+		State:           "MH",
+		Category:        stampmitra.CategoryEStamp,
+		ArticleCode:     "ART1",
+		Denomination:    1000,
+		// A party is a bare name or an object; use the object when the state wants an address
+		// or a father's or husband's name (see GetStateRequirements).
+		FirstParty:  stampmitra.PartyDetails(stampmitra.EstampParty{Name: "Jane Doe", Address: "12 MG Road, Pune"}),
+		SecondParty: &second,
+	}},
+}
+
+// 1. Validate: nothing is saved or charged. Show Warnings and Quote to your user.
+check, err := client.Estamp.Orders.Validate(ctx, order)
+if err == nil && !check.Valid {
+	log.Println("missing details:", check.Errors)
+}
+
+// 2. Create: debits both wallets. An Idempotency-Key is required by the API; when you pass none the SDK
+//    generates one and re-uses it on every automatic retry. Derive it from your own reference if your program may re-run.
+created, err := client.Estamp.Orders.Create(ctx, order, stampmitra.WithIdempotencyKey("create-order-2026-0917"))
+
+// 3. Upload the payer's PAN card: PDF, JPEG or PNG, at most 10 MB (optional).
+f, _ := os.Open("pan-card.pdf")
+defer f.Close()
+doc, err := client.Estamp.Orders.UploadDocument(ctx, created.ID, &stampmitra.EstampDocumentUploadParams{
+	File: f, FileName: "pan-card.pdf", Type: stampmitra.DocumentTypePANCard,
+})
+
+// 4. List the stamps, then 5. fetch a certificate (always HTTP 200: check Available).
+stamps, err := client.Estamp.Orders.ListStamps(ctx, created.ID)
+cert, err := client.Estamp.Stamps.GetCertificate(ctx, stamps.Items[0].ID)
+if err == nil && cert.Available {
+	log.Println("download before", cert.ExpiresAt, cert.DownloadURL) // the link is short-lived
+}
+```
+
+- The **PAN card is advisory**: an order is never held back for want of one. Send `PANCardImage` (an `https` link) on a stamp line,
+  upload the file as above, or send or replace a link later with `Estamp.Stamps.SetPANCard` (the API answers 202 and checks the card
+  afterwards: read `PANCard.Status` from `Stamps.Get`).
+- `FirstParty` and `SecondParty` are a `Party`: `PartyName("Jane Doe")` is sent as a string, `PartyDetails(EstampParty{...})` as an object
+  (`Name`, `Address`, `Phone`, `FatherHusbandName`, `Gender`). Both forms decode back into a `Party`.
+  `PropertyArea` is `&EstampPropertyArea{Unit: stampmitra.AreaSquareFeet, Value: 850}`.
+- `Cancel` (order and stamp), `Replace`, `SetPANCard` and the wallet top-ups are never retried automatically; see below.
+- A rejected body is a 400 `*APIError` whose `FieldErrors` list every finding (`Field`, `Code`, `Message`, `Index`); a 402 names the short
+  wallet in `Wallet` (`stampmitra.WalletStampDuty` or `stampmitra.WalletServiceFee`). Top that wallet up and send a new request.
+
+```go
+var order *stampmitra.EstampOrderParams // built as above
+_, err := client.Estamp.Orders.Create(ctx, order)
+var apiErr *stampmitra.APIError
+if errors.As(err, &apiErr) {
+	for _, f := range apiErr.FieldErrors {
+		log.Println(f.Field, f.Code, f.Message)
+	}
+	if stampmitra.IsPaymentRequired(err) {
+		log.Println("top up the", apiErr.Wallet, "wallet")
+	}
+}
+```
+
+### Wallets
+
+Orders are paid from two prepaid wallets: the **Stamp Duty Wallet** (the government duty) and the **Service Fee Wallet**
+(StampMitra's service charges). Balances are decimal strings.
+
+```go
+sd, err := client.StampDutyWallet.GetBalance(ctx)
+top, err := client.StampDutyWallet.Topup(ctx, &stampmitra.WalletTopupParams{BaseAmount: 1000})
+fmt.Println(top.ProcessingFeePercent, top.ProcessingFeeAmount, top.GstAmount, top.TotalCharged, top.CreditAmount)
+invoices, err := client.StampDutyWallet.ListInvoices(ctx, nil)
+both, err := client.Estamp.GetWallet(ctx) // both wallets in one read
+```
+
+A Stamp Duty top-up adds a **6% processing fee plus 18% GST on that fee** on top of `BaseAmount`; the wallet is credited the amount
+you added (`CreditAmount`, equal to `BaseAmount`), and stamp duty itself carries no GST. A GST tax invoice for the fee is available
+from `ListInvoices` / `GetInvoice` (the invoice id is the top-up's `TopupID`). Show your payer the figures the response returns
+(`ProcessingFeeAmount`, `GstAmount`, `TotalCharged`): the SDK never computes fees, because the rate can change. In that response
+`BaseAmount`, `GstAmount` and `TotalCharged` are JSON numbers (`float64`) and the other amounts are strings. A Service Fee top-up
+returns every amount as a string. Both top-ups return a payment order to complete in checkout (live keys); a sandbox top-up adds
+fake credit at once.
+
 ### Models
 
 Responses are structs with `json` tags (`pan.RegisteredName`). Every response struct has an `Extra map[string]json.RawMessage` holding
@@ -159,13 +256,13 @@ fmt.Println(st != nil, err == nil, raw.StatusCode, raw.RequestID, raw.Attempts, 
 ## Errors
 
 Every non-2xx response is an `*stampmitra.APIError` (`Status`, `Code`, `Message`, `RequestID`, `Field`, `RetryAfter`, `Body`,
-`Attempts`). Classify with `errors.Is` and the sentinels, or the helpers:
+`Attempts`, `FieldErrors`, `Wallet`, `Details`). Classify with `errors.Is` and the sentinels, or the helpers:
 
 | HTTP | Sentinel | Helper |
 |---|---|---|
-| 400 (and local validation) | `ErrValidation` | `IsValidation` |
+| 400, 422 (and local validation) | `ErrValidation` (`FieldErrors` lists each rejected input) | `IsValidation` |
 | 401 | `ErrAuthentication` | `IsAuthentication` |
-| 402 | `ErrPaymentRequired` | `IsPaymentRequired` |
+| 402 | `ErrPaymentRequired` (`Wallet` names the short wallet on e-Stamp orders) | `IsPaymentRequired` |
 | 403 | `ErrPermission` (server message verbatim, e.g. IP allowlist) | `IsPermission` |
 | 404 | `ErrNotFound` | `IsNotFound` |
 | 409 | `ErrConflict` | `IsConflict` |
@@ -196,14 +293,21 @@ default:
 ## Retries and idempotency
 
 Default `WithMaxRetries(2)` with exponential backoff and full jitter (500ms base, 8s cap); a `Retry-After` header (seconds or HTTP date,
-capped at 60s) overrides the computed delay; the API itself currently sends none. Retried: 429, 502, 503, 504, connection errors and
-timeouts. Not retried: other statuses (400, 401, 402, 403, 404, 409, 500 ...). GET is always retry-safe.
+capped at 60s) overrides the computed delay. The API sends it on every 429 and 503 and on `409 IDEMPOTENCY_IN_PROGRESS`.
+Retried: 429, 502, 503, 504, connection errors and timeouts, plus a 409 `IDEMPOTENCY_IN_PROGRESS` on a request that carries an
+Idempotency-Key (the identical request is sent again after `Retry-After`). Not retried: other statuses (400, 401, 402, 403, 404,
+422, 500, any other 409 ...). GET is always retry-safe.
 
-The API honours `Idempotency-Key` on every metered call, so the SDK generates a random UUIDv4 key (from `crypto/rand`; it fails
-rather than fall back to a weak generator) for **every POST except webhook replay** and reuses the **same key across automatic retries**.
-A retried verification, order or payment intent therefore replays the original result instead of being billed or created twice.
-Pass your own with `WithIdempotencyKey` (use one derived from your own order id when your program itself may re-run). A POST
-without a key (webhook replay) is never retried unless you give it one.
+The API honours `Idempotency-Key` on metered calls, order creation and document upload, so the SDK generates a random UUIDv4 key (from
+`crypto/rand`; it fails rather than fall back to a weak generator) for **every POST that accepts one** and reuses the **same key
+across automatic retries**. A retried verification, order or payment intent therefore replays the original result instead of being
+billed or created twice. `Estamp.Orders.Create` requires a key: when you pass none, the SDK sends one. Pass your own with
+`WithIdempotencyKey` (use one derived from your own order id when your program itself may re-run).
+
+These calls are **never retried automatically** (the API marks them not retry-safe and they take no Idempotency-Key, so the SDK
+sends none, even if you pass `WithIdempotencyKey`): `Estamp.Orders.Cancel`, `Estamp.Stamps.Cancel`, `Estamp.Stamps.Replace`,
+`Estamp.Stamps.SetPANCard`, `StampDutyWallet.Topup`, `ServiceFeeWallet.Topup` and `Webhooks.Events.Replay`. After an error, read
+the resource back before trying again. `Estamp.Orders.Validate` is a dry run (nothing created or billed, no key) and is retried like a GET.
 
 ## Pagination
 
@@ -217,6 +321,9 @@ if err := it.Err(); err != nil {
 	log.Fatal(err)
 }
 ```
+
+`Estamp.Orders.ListAll`, `StampDutyWallet.ListAllTransactions`, `ListAllInvoices` and the `ServiceFeeWallet` equivalents return a
+generic `*Iterator[T]` (`Next(ctx)`, `Item()`, `Err()`) that works the same way.
 
 `ListAll` performs no I/O itself; `Next` fetches pages lazily and follows `nextCursor`. For one page use `Logs.List` (`page.Items`,
 `page.NextCursor`). `Webhooks.Events.List` returns a `*GenericResponse` with `Items()` and `NextCursor()`.
@@ -293,7 +400,7 @@ Per-call rates by plan, in rupees, excluding 18% GST:
 | IP allowlisting | No | No | Yes | Yes | Yes | Yes |
 | White-label and custom domain | No | No | No | Yes | No | Yes |
 
-Growth and Scale are also available yearly (₹9,990 and ₹49,990, two months free). There are separate Startup and NGO programmes. Plans, rates and limits can change, and [developer.stampmitra.in/pricing](https://developer.stampmitra.in/pricing) is the source of truth; see it for how an e-Stamp order is priced in total.
+Growth and Scale are also available yearly (₹9,990 and ₹49,990, two months free). There are separate Startup and NGO programmes. Plans, rates and limits can change, and [developer.stampmitra.in/pricing](https://developer.stampmitra.in/pricing) is the source of truth; see it for how an e-Stamp order is priced in total. API e-Stamp orders are charged per paper as a procurement charge plus an API charge (ex-GST); see the pricing page for current rates.
 
 ## Security
 

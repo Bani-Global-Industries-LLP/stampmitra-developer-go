@@ -1,6 +1,7 @@
 package stampmitra
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,7 +12,7 @@ import (
 // Sentinel errors for use with errors.Is. Every error returned by this package matches exactly one
 // of them (or is a plain context error when the caller cancelled the context).
 var (
-	// ErrValidation matches local input validation failures and HTTP 400 responses.
+	// ErrValidation matches local input validation failures and HTTP 400 and 422 responses.
 	ErrValidation = errors.New("stampmitra: validation error")
 	// ErrAuthentication matches HTTP 401 responses.
 	ErrAuthentication = errors.New("stampmitra: authentication error")
@@ -63,6 +64,32 @@ type APIError struct {
 	Body []byte
 	// Attempts is how many HTTP attempts were made before giving up.
 	Attempts int
+	// FieldErrors lists every finding of a rejected e-Stamp order body (error.details.errors[]).
+	// Empty unless the API sent them (a 400 VALIDATION_FAILED).
+	FieldErrors []FieldIssue
+	// Wallet names the wallet that is short on a 402 from an e-Stamp order: WalletStampDuty or
+	// WalletServiceFee. Empty when the API did not say.
+	Wallet string
+	// Details is the raw error.details object, for anything not modelled above. May be nil.
+	Details json.RawMessage
+}
+
+// Wallet names reported in APIError.Wallet.
+const (
+	WalletStampDuty  = "STAMP_DUTY"
+	WalletServiceFee = "SERVICE_FEE"
+)
+
+// FieldIssue is one finding about one input of a rejected request body.
+type FieldIssue struct {
+	// Field is the path of the offending input, for example stamps[0].firstParty.name. May be empty.
+	Field string `json:"field"`
+	// Code is a stable machine code, for example REQUIRED or OUT_OF_RANGE.
+	Code string `json:"code"`
+	// Message is human-readable text.
+	Message string `json:"message"`
+	// Index is the zero-based stamp line the finding is about; nil when the finding is not about a line.
+	Index *int `json:"index,omitempty"`
 }
 
 // Error implements error.
@@ -88,7 +115,7 @@ func (e *APIError) Unwrap() error { return sentinelForStatus(e.Status) }
 
 func sentinelForStatus(status int) error {
 	switch {
-	case status == http.StatusBadRequest:
+	case status == http.StatusBadRequest || status == http.StatusUnprocessableEntity:
 		return ErrValidation
 	case status == http.StatusUnauthorized:
 		return ErrAuthentication

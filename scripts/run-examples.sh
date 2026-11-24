@@ -23,6 +23,7 @@ cd "$ROOT/examples"
 echo "== verify_pan";       go run ./verify_pan ABCDE1234F "Rahul Kumar"
 echo "== create_order";     go run ./create_order
 echo "== logs_pagination";  go run ./logs_pagination
+echo "== estamp_order";      go run ./estamp_order
 
 echo "== webhook_receiver"
 export WEBHOOK_SECRET="whsec_test_0123456789abcdef" PORT="$RPORT"

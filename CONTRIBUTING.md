@@ -15,7 +15,7 @@ Tools: `go install honnef.co/go/tools/cmd/staticcheck@latest`, golangci-lint v2 
 
 ### Conformance suite
 
-Runs all 31 operations, error mapping, retries, idempotency, timeouts, pagination and the shared vectors against the spec
+Runs all 62 operations and every golden fixture, error mapping, retries, idempotency, timeouts, pagination and the shared vectors against the spec
 repo's mock server. It starts the server itself (`os/exec`, free port), so you need Node and a checkout of the spec repo:
 
 ```bash

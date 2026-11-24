@@ -53,24 +53,118 @@ func (m PANVerification) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// GSTINVerification: Result of a GSTIN verification.
+// GSTINSplitAddress: One GST address split into parts.
+type GSTINSplitAddress struct {
+	// Building or premises name.
+	BuildingName string `json:"buildingName,omitempty"`
+	// Street / road.
+	Street string `json:"street,omitempty"`
+	// Locality.
+	Location string `json:"location,omitempty"`
+	// Building or door number.
+	BuildingNumber string `json:"buildingNumber,omitempty"`
+	// District.
+	District string `json:"district,omitempty"`
+	// State.
+	State string `json:"state,omitempty"`
+	// City.
+	City string `json:"city,omitempty"`
+	// Flat / floor.
+	FlatNumber string `json:"flatNumber,omitempty"`
+	// Latitude, as a string exactly as the registry returns it.
+	Latitude string `json:"latitude,omitempty"`
+	// Longitude, as a string exactly as the registry returns it.
+	Longitude string `json:"longitude,omitempty"`
+	// Six-digit PIN code.
+	Pincode string `json:"pincode,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *GSTINSplitAddress) UnmarshalJSON(b []byte) error {
+	type plain GSTINSplitAddress
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m GSTINSplitAddress) MarshalJSON() ([]byte, error) {
+	type plain GSTINSplitAddress
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// GSTINAdditionalAddress: An additional place of business on the registration.
+type GSTINAdditionalAddress struct {
+	// The additional place of business as one address string.
+	Address string `json:"address,omitempty"`
+	// The same address split into parts.
+	SplitAddress *GSTINSplitAddress `json:"splitAddress,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *GSTINAdditionalAddress) UnmarshalJSON(b []byte) error {
+	type plain GSTINAdditionalAddress
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m GSTINAdditionalAddress) MarshalJSON() ([]byte, error) {
+	type plain GSTINAdditionalAddress
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// GSTINVerification: Result of a GSTIN verification: the full registration record. Every field except referenceId, verificationId, gstin, GSTIN and valid is optional and is omitted when the registry does not provide it.
 type GSTINVerification struct {
 	// StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key.
 	ReferenceID string `json:"referenceId"`
-	// The GSTIN that was verified.
-	GSTIN string `json:"GSTIN"`
-	// Whether the GSTIN exists and is valid.
+	// StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+	VerificationID string `json:"verificationId"`
+	// The GSTIN that was verified. Always present; on an unknown GSTIN it is the number you sent.
+	GSTIN string `json:"gstin"`
+	// Same value as gstin. Kept so existing integrations keep working.
+	GSTINLegacy string `json:"GSTIN"`
+	// Whether the GSTIN exists and is registered. Always present.
 	Valid bool `json:"valid"`
-	// Legal name of the registrant.
-	LegalName string `json:"legalName,omitempty"`
-	// Trade name of the registrant.
-	TradeName string `json:"tradeName,omitempty"`
-	// Registration status, e.g. Active.
-	RegistrationStatus string `json:"registrationStatus,omitempty"`
-	// Principal place of business.
-	PrincipalPlaceOfBusiness string `json:"principalPlaceOfBusiness,omitempty"`
-	// Provider message.
+	// Legal name of the business registered against this GSTIN.
+	LegalNameOfBusiness string `json:"legalNameOfBusiness,omitempty"`
+	// Trade name of the business, when it has one.
+	TradeNameOfBusiness string `json:"tradeNameOfBusiness,omitempty"`
+	// Central tax jurisdiction (range) of the registration.
+	CenterJurisdiction string `json:"centerJurisdiction,omitempty"`
+	// State tax jurisdiction of the registration.
+	StateJurisdiction string `json:"stateJurisdiction,omitempty"`
+	// Date of GST registration, ISO yyyy-mm-dd.
+	DateOfRegistration string `json:"dateOfRegistration,omitempty"`
+	// Constitution of the business (legal form), for example Public Limited Company.
+	ConstitutionOfBusiness string `json:"constitutionOfBusiness,omitempty"`
+	// Taxpayer type, for example Regular or Composition.
+	TaxpayerType string `json:"taxpayerType,omitempty"`
+	// GST registration status, for example Active.
+	GSTINStatus string `json:"gstinStatus,omitempty"`
+	// Date the registration record was last updated, ISO yyyy-mm-dd.
+	LastUpdateDate string `json:"lastUpdateDate,omitempty"`
+	// Nature of business activities declared on the registration.
+	NatureOfBusinessActivities []string `json:"natureOfBusinessActivities,omitempty"`
+	// Principal place of business as one address string.
+	PrincipalPlaceAddress string `json:"principalPlaceAddress,omitempty"`
+	// Principal place of business split into parts.
+	PrincipalPlaceSplitAddress *GSTINSplitAddress `json:"principalPlaceSplitAddress,omitempty"`
+	// Additional places of business on the registration.
+	AdditionalAddresses []GSTINAdditionalAddress `json:"additionalAddresses,omitempty"`
+	// Human-readable outcome, for example GSTIN Exists or GSTIN Doesn't Exist.
 	Message string `json:"message,omitempty"`
+	// Same value as legalNameOfBusiness. Kept so existing integrations keep working.
+	LegalName string `json:"legalName,omitempty"`
+	// Same value as tradeNameOfBusiness. Kept so existing integrations keep working.
+	TradeName string `json:"tradeName,omitempty"`
+	// Same value as gstinStatus. Kept so existing integrations keep working.
+	RegistrationStatus string `json:"registrationStatus,omitempty"`
+	// Same value as principalPlaceAddress. Kept so existing integrations keep working.
+	PrincipalPlaceOfBusiness string `json:"principalPlaceOfBusiness,omitempty"`
 
 	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
 	Extra map[string]json.RawMessage `json:"-"`
@@ -139,24 +233,91 @@ func (m RCVerification) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// VoterIDVerification: Result of a Voter ID verification.
+// VoterIDSplitAddress: The registered address of the voter, split into parts.
+type VoterIDSplitAddress struct {
+	// District(s).
+	District []string `json:"district,omitempty"`
+	// State name(s), as a flat list.
+	State []string `json:"state,omitempty"`
+	// City or town name(s).
+	City []string `json:"city,omitempty"`
+	// PIN code.
+	Pincode string `json:"pincode,omitempty"`
+	// Country, as the codes and name given by the registry.
+	Country []string `json:"country,omitempty"`
+	// The address as one line.
+	AddressLine string `json:"addressLine,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *VoterIDSplitAddress) UnmarshalJSON(b []byte) error {
+	type plain VoterIDSplitAddress
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m VoterIDSplitAddress) MarshalJSON() ([]byte, error) {
+	type plain VoterIDSplitAddress
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// VoterIDVerification: Result of a Voter ID verification: the full voter record. Every field except referenceId, verificationId and valid is optional.
 type VoterIDVerification struct {
 	// StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key.
 	ReferenceID string `json:"referenceId"`
-	// Whether the Voter ID is valid.
+	// StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+	VerificationID string `json:"verificationId"`
+	// Whether the voter ID is valid. Always present.
 	Valid bool `json:"valid"`
-	// Registered name.
+	// Outcome of the lookup: VALID or INVALID.
+	Status string `json:"status,omitempty"`
+	// The voter ID (EPIC) number that was looked up.
+	EpicNumber string `json:"epicNumber,omitempty"`
+	// The voter's registered name, when the voter ID is valid.
 	Name string `json:"name,omitempty"`
-	// Date of birth.
+	// The voter's name in the regional language of the roll.
+	NameInRegionalLang string `json:"nameInRegionalLang,omitempty"`
+	// The voter's age in years, as a string, when available.
+	Age string `json:"age,omitempty"`
+	// Type of the relation named on the roll (for example FTHR for father, HUSB for husband).
+	RelationType string `json:"relationType,omitempty"`
+	// Name of the relative named on the roll.
+	RelationName string `json:"relationName,omitempty"`
+	// The relative's name in the regional language of the roll.
+	RelationNameInRegionalLang string `json:"relationNameInRegionalLang,omitempty"`
+	// The voter's father's name, when the roll gives it.
+	FatherName string `json:"fatherName,omitempty"`
+	// The voter's date of birth, ISO yyyy-mm-dd, when the roll has one.
 	DOB string `json:"dob,omitempty"`
-	// Gender.
+	// The voter's gender, when the voter ID is valid.
 	Gender string `json:"gender,omitempty"`
-	// Age in years.
-	Age *int64 `json:"age,omitempty"`
-	// Registered address.
+	// The registered address as one line, when the voter ID is valid.
 	Address string `json:"address,omitempty"`
-	// State.
+	// A link to the voter photo, when the roll has one. A link only, never image data; it can expire, so fetch it promptly.
+	PhotoURL string `json:"photoUrl,omitempty"`
+	// The registered address split into parts.
+	SplitAddress *VoterIDSplitAddress `json:"splitAddress,omitempty"`
+	// The registered state, when the voter ID is valid.
 	State string `json:"state,omitempty"`
+	// Assembly constituency number.
+	AssemblyConstituencyNumber string `json:"assemblyConstituencyNumber,omitempty"`
+	// Assembly constituency name.
+	AssemblyConstituency string `json:"assemblyConstituency,omitempty"`
+	// Parliamentary constituency number.
+	ParliamentaryConstituencyNumber string `json:"parliamentaryConstituencyNumber,omitempty"`
+	// Parliamentary constituency name.
+	ParliamentaryConstituency string `json:"parliamentaryConstituency,omitempty"`
+	// Part number of the electoral roll.
+	PartNumber string `json:"partNumber,omitempty"`
+	// Part name of the electoral roll.
+	PartName string `json:"partName,omitempty"`
+	// Serial number of the voter within the part.
+	SerialNumber string `json:"serialNumber,omitempty"`
+	// Name of the polling station.
+	PollingStation string `json:"pollingStation,omitempty"`
 
 	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
 	Extra map[string]json.RawMessage `json:"-"`
@@ -174,24 +335,208 @@ func (m VoterIDVerification) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// DrivingLicenseVerification: Result of a driving licence verification.
+// DrivingLicenseSplitAddress: A driving licence address split into parts. Every part can be null when the record holds none.
+type DrivingLicenseSplitAddress struct {
+	// District name(s).
+	District []string `json:"district,omitempty"`
+	// State name and code as one flat list. Can be [""] when the record carries no state.
+	State []string `json:"state,omitempty"`
+	// City or locality name(s).
+	City []string `json:"city,omitempty"`
+	// Six-digit PIN code.
+	Pincode *string `json:"pincode,omitempty"`
+	// Country code(s) and name.
+	Country []string `json:"country,omitempty"`
+	// The address as one line.
+	AddressLine *string `json:"addressLine,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *DrivingLicenseSplitAddress) UnmarshalJSON(b []byte) error {
+	type plain DrivingLicenseSplitAddress
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m DrivingLicenseSplitAddress) MarshalJSON() ([]byte, error) {
+	type plain DrivingLicenseSplitAddress
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// DrivingLicenseAddressEntry: One address on the licence record.
+type DrivingLicenseAddressEntry struct {
+	// The complete address as one string.
+	CompleteAddress *string `json:"completeAddress,omitempty"`
+	// Address type: permanent or temporary.
+	Type *string `json:"type,omitempty"`
+	// The same address split into parts.
+	SplitAddress *DrivingLicenseSplitAddress `json:"splitAddress,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *DrivingLicenseAddressEntry) UnmarshalJSON(b []byte) error {
+	type plain DrivingLicenseAddressEntry
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m DrivingLicenseAddressEntry) MarshalJSON() ([]byte, error) {
+	type plain DrivingLicenseAddressEntry
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// DrivingLicenseBadgeDetail: Transport badge details and the classes of vehicle covered.
+type DrivingLicenseBadgeDetail struct {
+	// Date the transport badge was issued, as supplied. null when the licence has no badge.
+	BadgeIssueDate *string `json:"badgeIssueDate,omitempty"`
+	// Transport badge number. null when the licence has no badge.
+	BadgeNo *string `json:"badgeNo,omitempty"`
+	// Classes of vehicle the licence covers, for example LMV.
+	ClassOfVehicle []string `json:"classOfVehicle,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *DrivingLicenseBadgeDetail) UnmarshalJSON(b []byte) error {
+	type plain DrivingLicenseBadgeDetail
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m DrivingLicenseBadgeDetail) MarshalJSON() ([]byte, error) {
+	type plain DrivingLicenseBadgeDetail
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// DrivingLicenseValidityPeriod: One validity period, as date strings exactly as supplied.
+type DrivingLicenseValidityPeriod struct {
+	// End of the validity period, a date string exactly as supplied (dd/mm/yyyy in the example). null when the class does not apply.
+	To *string `json:"to,omitempty"`
+	// Start of the validity period, a date string exactly as supplied (dd/mm/yyyy in the example). null when the class does not apply.
+	From *string `json:"from,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *DrivingLicenseValidityPeriod) UnmarshalJSON(b []byte) error {
+	type plain DrivingLicenseValidityPeriod
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m DrivingLicenseValidityPeriod) MarshalJSON() ([]byte, error) {
+	type plain DrivingLicenseValidityPeriod
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// DrivingLicenseValidity: Validity periods of the licence by class.
+type DrivingLicenseValidity struct {
+	// Validity of the non-transport (private vehicle) classes.
+	NonTransport *DrivingLicenseValidityPeriod `json:"nonTransport,omitempty"`
+	// Validity end for hazardous-goods vehicles, as supplied. null when not applicable.
+	HazardousValidTill *string `json:"hazardousValidTill,omitempty"`
+	// Validity of the transport (commercial vehicle) classes. Both dates are null when the licence has no transport class.
+	Transport *DrivingLicenseValidityPeriod `json:"transport,omitempty"`
+	// Validity end for hill-area driving, as supplied. null when not applicable.
+	HillValidTill *string `json:"hillValidTill,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *DrivingLicenseValidity) UnmarshalJSON(b []byte) error {
+	type plain DrivingLicenseValidity
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m DrivingLicenseValidity) MarshalJSON() ([]byte, error) {
+	type plain DrivingLicenseValidity
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// DrivingLicenseDetails: Details held on the licence record.
+type DrivingLicenseDetails struct {
+	// Date the licence was issued, a date string exactly as supplied (dd/mm/yyyy in the example).
+	DateOfIssue *string `json:"dateOfIssue,omitempty"`
+	// Date of the last transaction on the licence record, as supplied. null when there is none.
+	DateOfLastTransaction *string `json:"dateOfLastTransaction,omitempty"`
+	// Status text on the licence record. null when the record carries none.
+	Status *string `json:"status,omitempty"`
+	// Office where the last transaction was made. null when there is none.
+	LastTransactedAt *string `json:"lastTransactedAt,omitempty"`
+	// Name of the licence holder.
+	Name *string `json:"name,omitempty"`
+	// Name of the holder's father or husband.
+	FatherOrHusbandName *string `json:"fatherOrHusbandName,omitempty"`
+	// Addresses on record, each with its type (permanent or temporary).
+	AddressList []DrivingLicenseAddressEntry `json:"addressList,omitempty"`
+	// The holder address as one string.
+	Address *string `json:"address,omitempty"`
+	// A link to the licence holder photograph (a URL, never image data). The link is temporary: download the image promptly if you need it.
+	PhotoURL *string `json:"photoUrl,omitempty"`
+	// The holder address split into parts.
+	SplitAddress *DrivingLicenseSplitAddress `json:"splitAddress,omitempty"`
+	// Class-of-vehicle detail entries when the record carries any; an empty list otherwise.
+	CovDetails []map[string]json.RawMessage `json:"covDetails,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *DrivingLicenseDetails) UnmarshalJSON(b []byte) error {
+	type plain DrivingLicenseDetails
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m DrivingLicenseDetails) MarshalJSON() ([]byte, error) {
+	type plain DrivingLicenseDetails
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// DrivingLicenseVerification: Result of a driving licence verification: the full licence record. Every field except referenceId, verificationId and valid is optional.
 type DrivingLicenseVerification struct {
 	// StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key.
 	ReferenceID string `json:"referenceId"`
-	// Whether the licence is valid.
+	// StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+	VerificationID string `json:"verificationId"`
+	// Whether the driving licence is valid. Always present.
 	Valid bool `json:"valid"`
-	// Licence holder's name.
-	Name string `json:"name,omitempty"`
-	// Father's or husband's name.
-	FatherOrHusbandName string `json:"fatherOrHusbandName,omitempty"`
-	// Date of birth.
+	// The driving licence number that was looked up.
+	DLNumber string `json:"dlNumber,omitempty"`
+	// The licence holder's date of birth, ISO yyyy-mm-dd.
 	DOB string `json:"dob,omitempty"`
-	// Address.
-	Address string `json:"address,omitempty"`
-	// Licence valid-until date.
-	ValidUpto string `json:"validUpto,omitempty"`
-	// Licence status, e.g. ACTIVE.
+	// Outcome of the lookup: VALID or INVALID.
+	Status string `json:"status,omitempty"`
+	// Same value as status. Kept so existing integrations keep working.
 	DLStatus string `json:"dlStatus,omitempty"`
+	// The licence holder's registered name. Same as detailsOfDrivingLicence.name. Kept for existing integrations.
+	Name string `json:"name,omitempty"`
+	// Name of the holder's father or husband. Same as detailsOfDrivingLicence.fatherOrHusbandName. Kept for existing integrations.
+	FatherOrHusbandName string `json:"fatherOrHusbandName,omitempty"`
+	// The registered address as one string. Same as detailsOfDrivingLicence.address. Kept for existing integrations.
+	Address string `json:"address,omitempty"`
+	// End of validity of the non-transport classes, a date string exactly as supplied (dd/mm/yyyy in the example). Same as dlValidity.nonTransport.to. Kept for existing integrations.
+	ValidUpto string `json:"validUpto,omitempty"`
+	// Transport badge details and the classes of vehicle covered. null when the record carries no badge block.
+	BadgeDetails []DrivingLicenseBadgeDetail `json:"badgeDetails,omitempty"`
+	// Validity periods of the licence by class: non-transport, transport, hazardous goods and hill area.
+	DLValidity *DrivingLicenseValidity `json:"dlValidity,omitempty"`
+	// Details held on the licence record: issue date, holder names, addresses, photograph link and class-of-vehicle details.
+	DetailsOfDrivingLicence *DrivingLicenseDetails `json:"detailsOfDrivingLicence,omitempty"`
 
 	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
 	Extra map[string]json.RawMessage `json:"-"`
@@ -209,18 +554,26 @@ func (m DrivingLicenseVerification) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// PassportVerification: Result of a passport verification.
+// PassportVerification: Result of a passport verification: the application record. Every field except referenceId, verificationId and valid is optional.
 type PassportVerification struct {
 	// StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key.
 	ReferenceID string `json:"referenceId"`
-	// Whether the passport application was found and matches.
+	// StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+	VerificationID string `json:"verificationId"`
+	// Whether the passport application file number is valid. Always present.
 	Valid bool `json:"valid"`
-	// Applicant's name.
+	// Outcome of the lookup: VALID or INVALID.
+	Status string `json:"status,omitempty"`
+	// The passport application file number that was looked up. This is the application file number, not the passport number.
+	FileNumber string `json:"fileNumber,omitempty"`
+	// The applicant's name as held on the application, when valid.
 	Name string `json:"name,omitempty"`
-	// Date of birth.
+	// The applicant's date of birth, ISO yyyy-mm-dd, when valid.
 	DOB string `json:"dob,omitempty"`
-	// Application type, e.g. Fresh.
+	// The type of passport application (for example NORMAL), when valid.
 	ApplicationType string `json:"applicationType,omitempty"`
+	// Date the application was received, ISO yyyy-mm-dd, when valid.
+	ApplicationReceivedDate string `json:"applicationReceivedDate,omitempty"`
 
 	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
 	Extra map[string]json.RawMessage `json:"-"`
@@ -263,28 +616,65 @@ func (m CINDirector) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// CINVerification: Result of a company CIN verification.
+// CINDirectorDetail: A director or designated partner as the registry returns them.
+type CINDirectorDetail struct {
+	// Director Identification Number (DIN).
+	DIN string `json:"din,omitempty"`
+	// Director's name.
+	Name string `json:"name,omitempty"`
+	// Director's date of birth, ISO yyyy-mm-dd.
+	DOB string `json:"dob,omitempty"`
+	// Director's designation, for example DIRECTOR.
+	Designation string `json:"designation,omitempty"`
+	// Director's address on record, as one string.
+	Address string `json:"address,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *CINDirectorDetail) UnmarshalJSON(b []byte) error {
+	type plain CINDirectorDetail
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m CINDirectorDetail) MarshalJSON() ([]byte, error) {
+	type plain CINDirectorDetail
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// CINVerification: Result of a company CIN verification: the full company record. Every field except referenceId, verificationId, valid and cin is optional and is omitted when the registry does not provide it.
 type CINVerification struct {
 	// StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key.
 	ReferenceID string `json:"referenceId"`
-	// Whether the CIN is valid.
+	// StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+	VerificationID string `json:"verificationId"`
+	// Whether the CIN is valid. Always present. True exactly when status is VALID.
 	Valid bool `json:"valid"`
-	// Company name.
+	// Registry outcome of the lookup: VALID or INVALID.
+	Status string `json:"status,omitempty"`
+	// The CIN that was verified. Always present; on an invalid CIN it is the number you sent.
+	CIN string `json:"cin"`
+	// Registered company name, when the CIN is valid.
 	CompanyName string `json:"companyName,omitempty"`
-	// Incorporation date.
+	// Company registration number, a number (not a string), when available.
+	RegistrationNumber *int64 `json:"registrationNumber,omitempty"`
+	// Date of incorporation, ISO yyyy-mm-dd.
 	IncorporationDate string `json:"incorporationDate,omitempty"`
-	// CIN status.
+	// Company status as recorded by the MCA, for example ACTIVE.
 	CINStatus string `json:"cinStatus,omitempty"`
-	// Company status.
-	CompanyStatus string `json:"companyStatus,omitempty"`
-	// Directors on record.
-	Directors []CINDirector `json:"directors,omitempty"`
-	// Company email address.
+	// Registered email address of the company.
 	Email string `json:"email,omitempty"`
-	// Registration number.
-	RegistrationNumber string `json:"registrationNumber,omitempty"`
-	// Country of incorporation.
+	// Country of incorporation, for example INDIA.
 	IncorporationCountry string `json:"incorporationCountry,omitempty"`
+	// Directors / designated partners on record, with date of birth and address.
+	DirectorDetails []CINDirectorDetail `json:"directorDetails,omitempty"`
+	// Same value as cinStatus. Kept so existing integrations keep working.
+	CompanyStatus string `json:"companyStatus,omitempty"`
+	// Directors with name, DIN and designation only. Kept so existing integrations keep working; directorDetails has the full entries.
+	Directors []CINDirector `json:"directors,omitempty"`
 
 	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
 	Extra map[string]json.RawMessage `json:"-"`
@@ -302,22 +692,200 @@ func (m CINVerification) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// UdyamVerification: Result of a Udyam verification.
+// UdyamClassificationHistoryEntry: One year of the enterprise's MSME classification history.
+type UdyamClassificationHistoryEntry struct {
+	// Position of the entry in the history.
+	SerialNumber string `json:"serialNumber,omitempty"`
+	// Financial year of that classification.
+	ClassificationYear string `json:"classificationYear,omitempty"`
+	// Micro, Small or Medium for that year.
+	EnterpriseType string `json:"enterpriseType,omitempty"`
+	// Date of that classification, ISO yyyy-mm-dd.
+	ClassificationDate string `json:"classificationDate,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *UdyamClassificationHistoryEntry) UnmarshalJSON(b []byte) error {
+	type plain UdyamClassificationHistoryEntry
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m UdyamClassificationHistoryEntry) MarshalJSON() ([]byte, error) {
+	type plain UdyamClassificationHistoryEntry
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// UdyamSplitAddress: Registered address of the enterprise, with the registered contact details.
+type UdyamSplitAddress struct {
+	// Flat / door / floor.
+	Flat string `json:"flat,omitempty"`
+	// Building or premises name / number.
+	Building string `json:"building,omitempty"`
+	// Village or town.
+	Village string `json:"village,omitempty"`
+	// Block.
+	Block string `json:"block,omitempty"`
+	// Street / road.
+	Street string `json:"street,omitempty"`
+	// City.
+	City string `json:"city,omitempty"`
+	// District.
+	District string `json:"district,omitempty"`
+	// State.
+	State string `json:"state,omitempty"`
+	// Six-digit PIN code.
+	Pincode string `json:"pincode,omitempty"`
+	// Registered mobile number, already masked at source (for example 70*****210). Passed through as received, never unmasked.
+	Mobile string `json:"mobile,omitempty"`
+	// Registered email address.
+	Email string `json:"email,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *UdyamSplitAddress) UnmarshalJSON(b []byte) error {
+	type plain UdyamSplitAddress
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m UdyamSplitAddress) MarshalJSON() ([]byte, error) {
+	type plain UdyamSplitAddress
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// UdyamUnitLocation: One unit location of the enterprise.
+type UdyamUnitLocation struct {
+	// Position of the unit in the list.
+	SerialNumber string `json:"serialNumber,omitempty"`
+	// Name of the unit.
+	UnitName string `json:"unitName,omitempty"`
+	// Flat / door / floor.
+	Flat string `json:"flat,omitempty"`
+	// Building or premises name / number.
+	Building string `json:"building,omitempty"`
+	// Village or town.
+	Village string `json:"village,omitempty"`
+	// Block.
+	Block string `json:"block,omitempty"`
+	// Street / road.
+	Street string `json:"street,omitempty"`
+	// City.
+	City string `json:"city,omitempty"`
+	// District.
+	District string `json:"district,omitempty"`
+	// State.
+	State string `json:"state,omitempty"`
+	// Six-digit PIN code.
+	Pincode string `json:"pincode,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *UdyamUnitLocation) UnmarshalJSON(b []byte) error {
+	type plain UdyamUnitLocation
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m UdyamUnitLocation) MarshalJSON() ([]byte, error) {
+	type plain UdyamUnitLocation
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// UdyamNICCode: One NIC activity code the enterprise is registered under.
+type UdyamNICCode struct {
+	// Position of the activity in the list.
+	SerialNumber string `json:"serialNumber,omitempty"`
+	// NIC 2-digit division code.
+	Nic2Digit string `json:"nic2Digit,omitempty"`
+	// NIC 2-digit division description.
+	Nic2Description string `json:"nic2Description,omitempty"`
+	// NIC 4-digit class code.
+	Nic4Digit string `json:"nic4Digit,omitempty"`
+	// NIC 4-digit class description.
+	Nic4Description string `json:"nic4Description,omitempty"`
+	// NIC 5-digit sub-class code.
+	Nic5Digit string `json:"nic5Digit,omitempty"`
+	// NIC 5-digit sub-class description.
+	Nic5Description string `json:"nic5Description,omitempty"`
+	// Activity type: Manufacturing, Services or Trading.
+	Activity string `json:"activity,omitempty"`
+	// Date the activity was added, ISO yyyy-mm-dd.
+	Date string `json:"date,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *UdyamNICCode) UnmarshalJSON(b []byte) error {
+	type plain UdyamNICCode
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m UdyamNICCode) MarshalJSON() ([]byte, error) {
+	type plain UdyamNICCode
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// UdyamVerification: Result of a Udyam verification: the full registration record. Every field except referenceId, verificationId and found is optional.
 type UdyamVerification struct {
 	// StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key.
 	ReferenceID string `json:"referenceId"`
-	// Whether the Udyam registration was found.
+	// StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+	VerificationID string `json:"verificationId"`
+	// Whether an active Udyam registration was found. Always present.
 	Found bool `json:"found"`
-	// Registration status.
+	// Outcome of the lookup: SUCCESS, UDYAM_NOT_FOUND or UDYAM_IS_CANCELLED.
+	Status string `json:"status,omitempty"`
+	// Same value as status. Kept so existing integrations keep working.
 	UdyamStatus string `json:"udyamStatus,omitempty"`
-	// Enterprise name.
+	// The Udyam registration number that was looked up.
+	UdyamNumber string `json:"udyamNumber,omitempty"`
+	// Registered enterprise name.
 	EnterpriseName string `json:"enterpriseName,omitempty"`
-	// Enterprise type.
-	EnterpriseType string `json:"enterpriseType,omitempty"`
-	// Organization type, e.g. Micro.
+	// Legal form of the organisation, for example Proprietary.
 	OrganizationType string `json:"organizationType,omitempty"`
-	// URL of the Udyam certificate.
+	// Major activity: Manufacturing, Services or Trading.
+	MajorActivity string `json:"majorActivity,omitempty"`
+	// Social category of the owner, for example General.
+	SocialCategory string `json:"socialCategory,omitempty"`
+	// Date of incorporation, ISO yyyy-mm-dd.
+	DateOfIncorporation string `json:"dateOfIncorporation,omitempty"`
+	// Date business commenced, ISO yyyy-mm-dd.
+	DateOfCommencement string `json:"dateOfCommencement,omitempty"`
+	// Date the Udyam registration was issued, ISO yyyy-mm-dd.
+	DateOfUdyamRegistration string `json:"dateOfUdyamRegistration,omitempty"`
+	// Current MSME classification: Micro, Small or Medium.
+	EnterpriseType string `json:"enterpriseType,omitempty"`
+	// Financial year of the current classification, for example 2024-25.
+	ClassificationYear string `json:"classificationYear,omitempty"`
+	// Date of the current classification, ISO yyyy-mm-dd.
+	ClassificationDate string `json:"classificationDate,omitempty"`
+	// URL of the Udyam registration certificate (PDF).
 	CertificateURL string `json:"certificateUrl,omitempty"`
+	// Year-by-year classification history, most recent first.
+	ClassificationHistory []UdyamClassificationHistoryEntry `json:"classificationHistory,omitempty"`
+	// Registered address of the enterprise, split into parts, with the registered contact details.
+	SplitAddress *UdyamSplitAddress `json:"splitAddress,omitempty"`
+	// Locations of the enterprise units.
+	UnitLocations []UdyamUnitLocation `json:"unitLocations,omitempty"`
+	// NIC activity codes the enterprise is registered under.
+	NicCodes []UdyamNICCode `json:"nicCodes,omitempty"`
+	// District Industries Centre.
+	Dic string `json:"dic,omitempty"`
+	// MSME Development Institute.
+	MsmeDi string `json:"msmeDi,omitempty"`
 
 	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
 	Extra map[string]json.RawMessage `json:"-"`
@@ -385,16 +953,22 @@ func (m PANToGSTIN) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// PANToUdyam: Result of a PAN to Udyam lookup.
+// PANToUdyam: Result of a PAN to Udyam lookup. Every field except referenceId, verificationId and found is optional; udyam and udyamNumber carry the same value.
 type PANToUdyam struct {
 	// StampMitra's own transaction id for this call (SMV-YYYYMMDD-XXXXXXX). Always present, including on a negative result. Not an idempotency key.
 	ReferenceID string `json:"referenceId"`
-	// Whether a Udyam registration was found for the PAN.
+	// StampMitra's own id for this verification (VRF- followed by 12 base32 characters). Generated for every call, unique to it. Always present. Quote it in support requests.
+	VerificationID string `json:"verificationId"`
+	// Whether an active Udyam registration was found for the PAN. Always present.
 	Found bool `json:"found"`
-	// Registration status.
+	// Outcome of the lookup: SUCCESS, UDYAM_NOT_FOUND or UDYAM_IS_CANCELLED.
 	Status string `json:"status,omitempty"`
-	// The Udyam registration number.
-	UdyamNumber string `json:"udyamNumber,omitempty"`
+	// The PAN the lookup was made for.
+	PAN string `json:"pan,omitempty"`
+	// The Udyam registration number linked to the PAN, at most one. null when no registration is linked.
+	Udyam *string `json:"udyam,omitempty"`
+	// Same value as udyam. Kept so existing integrations keep working.
+	UdyamNumber *string `json:"udyamNumber,omitempty"`
 
 	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
 	Extra map[string]json.RawMessage `json:"-"`
@@ -801,6 +1375,1105 @@ func (m LogsPage) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
+// AccountBalance: Wallet balance and low-balance state of the organization that owns the API key.
+type AccountBalance struct {
+	// When this snapshot was computed (cached up to 5 seconds).
+	GeneratedAt string `json:"generatedAt"`
+	// Environment of the API key.
+	Environment string `json:"environment"`
+	// True for an sk_test_ key: no real balance is ever returned.
+	Sandbox bool `json:"sandbox"`
+	// Sandbox notice; null for a live key.
+	Notice *string `json:"notice,omitempty"`
+	// Always INR.
+	Currency string `json:"currency"`
+	// Wallet cash balance (includes any leftover signup credit). Zero for a sandbox key.
+	Balance Money `json:"balance"`
+	// What a call can spend now: cash plus eligible promo credit.
+	Available Money `json:"available"`
+	// OK; LOW_BALANCE below the threshold; FINISHED at zero or below the cheapest call (live calls then answer 402).
+	State string `json:"state"`
+	// True when state is not OK.
+	LowBalance bool `json:"lowBalance"`
+	// Low-balance threshold (Rs 500 by default).
+	LowBalanceThreshold     Money                 `json:"lowBalanceThreshold"`
+	EstimatedCallsRemaining AccountEstimatedCalls `json:"estimatedCallsRemaining"`
+	// Newest top-up, base amount credited (GST excluded); null when never topped up.
+	LastTopUp    *AccountLastTopUp   `json:"lastTopUp,omitempty"`
+	SignupCredit AccountSignupCredit `json:"signupCredit"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountBalance) UnmarshalJSON(b []byte) error {
+	type plain AccountBalance
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountBalance) MarshalJSON() ([]byte, error) {
+	type plain AccountBalance
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountUsage: Usage of the organization that owns the API key: current and previous IST month, today, and the limits.
+type AccountUsage struct {
+	// When this snapshot was computed (cached up to 30 seconds).
+	GeneratedAt string `json:"generatedAt"`
+	// Environment of the API key; only that environment's calls are counted.
+	Environment string `json:"environment"`
+	// True for an sk_test_ key.
+	Sandbox bool `json:"sandbox"`
+	// Sandbox notice; null for a live key.
+	Notice *string `json:"notice,omitempty"`
+	// Day and month boundaries use this zone.
+	Timezone      string             `json:"timezone"`
+	CurrentMonth  AccountUsagePeriod `json:"currentMonth"`
+	PreviousMonth AccountUsagePeriod `json:"previousMonth"`
+	Today         AccountUsageToday  `json:"today"`
+	Limits        AccountUsageLimits `json:"limits"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountUsage) UnmarshalJSON(b []byte) error {
+	type plain AccountUsage
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountUsage) MarshalJSON() ([]byte, error) {
+	type plain AccountUsage
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampStateAvailability: Live availability of one state.
+type EstampStateAvailability struct {
+	// State code.
+	Code string `json:"code"`
+	// State name.
+	Name string `json:"name"`
+	// The live operational switch: whether the state accepts new stamp orders right now. A state can be switched off temporarily, for example during a government portal outage.
+	Active bool `json:"active"`
+	// Static serviceability: e-Stamps can be issued in this state.
+	EStampAvailable bool `json:"eStampAvailable"`
+	// Static serviceability: traditional (paper) stamps are available in this state.
+	TraditionalAvailable bool `json:"traditionalAvailable"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampStateAvailability) UnmarshalJSON(b []byte) error {
+	type plain EstampStateAvailability
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampStateAvailability) MarshalJSON() ([]byte, error) {
+	type plain EstampStateAvailability
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampStatesAvailability: Which states are accepting new stamp orders right now.
+type EstampStatesAvailability struct {
+	// States, or only the active ones with ?active=true.
+	Data []EstampStateAvailability `json:"data"`
+	// Number of rows in data.
+	Count int64 `json:"count"`
+	// Number of active states (independent of the active filter).
+	ActiveCount int64 `json:"activeCount"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampStatesAvailability) UnmarshalJSON(b []byte) error {
+	type plain EstampStatesAvailability
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampStatesAvailability) MarshalJSON() ([]byte, error) {
+	type plain EstampStatesAvailability
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampState: One state's detail: serviceability and the flags that decide which fields an order needs. Further catalogue fields may be added; ignore unknown ones.
+type EstampState struct {
+	// State code. Every other route takes it as stateCode.
+	Code string `json:"code"`
+	// State name.
+	Name string `json:"name"`
+	// Whether the state is currently active in the catalogue.
+	IsActive *bool `json:"isActive,omitempty"`
+	// Whether e-Stamps can be issued here.
+	EStampAvailable *bool `json:"eStampAvailable,omitempty"`
+	// Whether physical stamp papers are available here.
+	TraditionalAvailable *bool `json:"traditionalAvailable,omitempty"`
+	// State-level minimum duty amount, where one applies: a decimal string such as "100.00", a number in sandbox, or null.
+	MinAmount json.RawMessage `json:"minAmount,omitempty"`
+	// State-level maximum duty amount, where one applies: a decimal string such as "500000.00", a number in sandbox, or null.
+	MaxAmount json.RawMessage `json:"maxAmount,omitempty"`
+	// Whether a district and a sub-registrar office must accompany a quote and an order.
+	SRORequired *bool `json:"sroRequired,omitempty"`
+	// Whether a cess amount is expected on stamp lines.
+	CessRequired *bool `json:"cessRequired,omitempty"`
+	// Whether the stamp line needs a propertyArea.
+	PropertyAreaRequired *bool `json:"propertyAreaRequired,omitempty"`
+	// Whether the state asks for a father's or husband's name. null means not known, not no.
+	FatherHusbandNameRequired *bool `json:"fatherHusbandNameRequired,omitempty"`
+	// Whether the first party's address is needed. null means not known, not no.
+	FirstPartyAddressRequired *bool `json:"firstPartyAddressRequired,omitempty"`
+	// Whether the state asks for the payer's PAN card. Recommended, never blocking. null means not known.
+	PANCardImageRequired *bool `json:"panCardImageRequired,omitempty"`
+	// How many articles the state offers.
+	InstrumentCount *int64 `json:"instrumentCount,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampState) UnmarshalJSON(b []byte) error {
+	type plain EstampState
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampState) MarshalJSON() ([]byte, error) {
+	type plain EstampState
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampDistrict: One district of a state. Further fields may be added; ignore unknown ones.
+type EstampDistrict struct {
+	// District code. Send it as district on a stamp line and in the SRO route.
+	Code string `json:"code"`
+	// District name.
+	Name string `json:"name"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampDistrict) UnmarshalJSON(b []byte) error {
+	type plain EstampDistrict
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampDistrict) MarshalJSON() ([]byte, error) {
+	type plain EstampDistrict
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampSRO: One sub-registrar office of a district. Further fields may be added; ignore unknown ones.
+type EstampSRO struct {
+	// The value to send as sro on a stamp line (and as sroValue in a duty calculation).
+	Value string `json:"value"`
+	// Display name of the sub-registrar office on the live catalogue (the sandbox catalogue sends name instead).
+	Label string `json:"label,omitempty"`
+	// Display name of the sub-registrar office in the sandbox catalogue.
+	Name string `json:"name,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampSRO) UnmarshalJSON(b []byte) error {
+	type plain EstampSRO
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampSRO) MarshalJSON() ([]byte, error) {
+	type plain EstampSRO
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampRequirements: Machine-readable field requirements for a state and, optionally, an article, a denomination and a category, plus a generated exampleBody. Further catalogue fields may be added; ignore unknown ones.
+type EstampRequirements struct {
+	// The state the requirements are for. Further fields may be added.
+	State *EstampRequirementsState `json:"state,omitempty"`
+	// The category the requirements were resolved for.
+	Category string `json:"category,omitempty"`
+	// The resolved article; null when articleCode was not given.
+	Article *EstampRequirementsArticle `json:"article,omitempty"`
+	// The denomination rules for the article.
+	Denomination *EstampDenominationRules `json:"denomination,omitempty"`
+	// Required and optional fields for the combination. The fields marked required are exactly what validate and create reject when blank.
+	Fields []EstampRequirementField `json:"fields,omitempty"`
+	// Request limits reported by the catalogue, for example maxQuantityPerLine.
+	Limits map[string]json.RawMessage `json:"limits,omitempty"`
+	// Further catalogue flags, for example panCardImageRequired.
+	Meta map[string]json.RawMessage `json:"meta,omitempty"`
+	// A valid single-stamp request body for this combination, generated from the resolved fields (only fields marked required are added, plus the always-needed ones). Its names and values are illustrations. Ready to send to POST /v1/estamp/orders/validate.
+	ExampleBody EstampRequirementsExample `json:"exampleBody"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampRequirements) UnmarshalJSON(b []byte) error {
+	type plain EstampRequirements
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampRequirements) MarshalJSON() ([]byte, error) {
+	type plain EstampRequirements
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampOrderQuote: Priced totals in rupees. Never recalculate or override them. What the customer pays for the order is faceValueTotal + serviceFeeTotal + gstOnFee.
+type EstampOrderQuote struct {
+	// Government duty (face value) for the whole order, in rupees. Paid from the Stamp Duty Wallet.
+	FaceValueTotal float64 `json:"faceValueTotal"`
+	// Service charges for the whole order before GST, in rupees.
+	ServiceFeeTotal float64 `json:"serviceFeeTotal"`
+	// GST on the service charges, in rupees.
+	GstOnFee float64 `json:"gstOnFee"`
+	// What the Service Fee Wallet is debited when the order is created (the service charges net of GST), in rupees.
+	ServiceWalletDebitTotal float64 `json:"serviceWalletDebitTotal"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampOrderQuote) UnmarshalJSON(b []byte) error {
+	type plain EstampOrderQuote
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampOrderQuote) MarshalJSON() ([]byte, error) {
+	type plain EstampOrderQuote
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampValidationIssue: One finding in the errors or warnings list of a validate answer.
+type EstampValidationIssue struct {
+	// Zero-based index of the stamp line the finding is about.
+	Index int64 `json:"index"`
+	// Human-readable text.
+	Message string `json:"message"`
+	// Stable per-row code, when known (STATE_INACTIVE, AMOUNT_NOT_MULTIPLE, INVALID_PAN_CARD_LINK, PAYER_NOT_A_PARTY, ...).
+	Code string `json:"code,omitempty"`
+	// Path of the offending input, when known, for example stamps[0].firstParty.name.
+	Field string `json:"field,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampValidationIssue) UnmarshalJSON(b []byte) error {
+	type plain EstampValidationIssue
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampValidationIssue) MarshalJSON() ([]byte, error) {
+	type plain EstampValidationIssue
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampDocumentRequirement: What a validate answer says about the payer's PAN card.
+type EstampDocumentRequirement struct {
+	// What is asked for.
+	Type string `json:"type"`
+	// Always false: the payer's PAN card is advisory and an order is never held back for want of it.
+	Required bool `json:"required"`
+	// true when the state asks for a PAN card.
+	Recommended bool `json:"recommended"`
+	// The route that takes the file.
+	UploadWith string `json:"uploadWith"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampDocumentRequirement) UnmarshalJSON(b []byte) error {
+	type plain EstampDocumentRequirement
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampDocumentRequirement) MarshalJSON() ([]byte, error) {
+	type plain EstampDocumentRequirement
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampOrderCounts: Stamp counts by category. Quantities are included, so a line with quantity 2 counts 2.
+type EstampOrderCounts struct {
+	// All stamps, quantities included.
+	Total *int64 `json:"total,omitempty"`
+	// e_stamp stamps, quantities included.
+	EStamp *int64 `json:"e_stamp,omitempty"`
+	// traditional_stamp stamps, quantities included.
+	TraditionalStamp *int64 `json:"traditional_stamp,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampOrderCounts) UnmarshalJSON(b []byte) error {
+	type plain EstampOrderCounts
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampOrderCounts) MarshalJSON() ([]byte, error) {
+	type plain EstampOrderCounts
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampValidateResult: Result of validating an order. Nothing was saved and nothing was charged.
+type EstampValidateResult struct {
+	// false when a detail is missing (status NEEDS_INFORMATION).
+	Valid bool `json:"valid"`
+	// Your order reference, or null when you sent none.
+	Reference *string `json:"reference,omitempty"`
+	// State of the first stamp line.
+	State *string `json:"state,omitempty"`
+	// READY_TO_PLACE (nothing wrong found), WARNINGS (passed with notes) or NEEDS_INFORMATION (a detail is missing). The answer is a success status in all three cases; a 400 is returned only for a body that cannot be accepted.
+	Status string `json:"status"`
+	// true on a sandbox key.
+	IsTest bool              `json:"isTest"`
+	Counts EstampOrderCounts `json:"counts"`
+	// Missing or wrong details. Non-empty only when valid is false.
+	Errors []EstampValidationIssue `json:"errors"`
+	// Pricing or compliance notes. Show them to the user before creating.
+	Warnings []EstampValidationIssue `json:"warnings"`
+	// Priced totals for the order; null only when pricing was unavailable for this call.
+	Quote *EstampOrderQuote `json:"quote,omitempty"`
+	// Always one PAN_CARD_IMAGE entry: whether a PAN card is advisable for this state. Never blocking.
+	DocumentsRequired []EstampDocumentRequirement `json:"documentsRequired"`
+	// When this validation was run.
+	CreatedAt string `json:"createdAt"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampValidateResult) UnmarshalJSON(b []byte) error {
+	type plain EstampValidateResult
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampValidateResult) MarshalJSON() ([]byte, error) {
+	type plain EstampValidateResult
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampOrderStampRef: A created stamp: its id and your own line reference.
+type EstampOrderStampRef struct {
+	// Stamp id.
+	ID string `json:"id"`
+	// Echoes the clientReference of the line, when you sent one.
+	ClientReference string `json:"clientReference,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampOrderStampRef) UnmarshalJSON(b []byte) error {
+	type plain EstampOrderStampRef
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampOrderStampRef) MarshalJSON() ([]byte, error) {
+	type plain EstampOrderStampRef
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampOrderAdvisory: A non-blocking hint about the order. Nothing is held back because of an advisory; it clears once you act on it.
+type EstampOrderAdvisory struct {
+	// Advisory code, for example PAN_CARD_RECOMMENDED.
+	Code string `json:"code"`
+	// The input the advisory is about.
+	Field string `json:"field,omitempty"`
+	// Human-readable hint.
+	Message string `json:"message"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampOrderAdvisory) UnmarshalJSON(b []byte) error {
+	type plain EstampOrderAdvisory
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampOrderAdvisory) MarshalJSON() ([]byte, error) {
+	type plain EstampOrderAdvisory
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampOrder: An e-Stamp order. The same shape is returned by create, get, cancel and each item of the list; create always fills id, state, stampCount, stamps, counts and documents. Further fields may be added; ignore unknown ones.
+type EstampOrder struct {
+	// Order id, used by GET /v1/estamp/orders/{id} and the cancel and export routes.
+	ID string `json:"id"`
+	// The issuing-side order id. The parties route POST /v1/estamp/orders/{orderId}/parties takes this one.
+	OrderID string `json:"orderId,omitempty"`
+	// Your own order-level reference, if you supplied one.
+	Reference *string `json:"reference,omitempty"`
+	// State this order is issued in. Absent on an order the issuing side reports without it.
+	State string `json:"state,omitempty"`
+	// Pre-placement review status on a live order: PENDING_REVIEW, READY_TO_PLACE, WARNINGS, NEEDS_INFORMATION, VALIDATION_FAILED or CANCELLED. A person confirms placement with the issuing vendor separately, so these are never the vendor's PLACED, PARTIAL or FULFILLED. A sandbox order uses CREATED, PAYMENT_PENDING, PROCESSING, ISSUED, PAYMENT_FAILED, ISSUANCE_FAILED, CANCELLED or EXPIRED and advances by itself. Treat an unknown value as needing attention instead of failing.
+	Status string `json:"status"`
+	// true when the order was created in the sandbox environment.
+	IsTest *bool              `json:"isTest,omitempty"`
+	Counts *EstampOrderCounts `json:"counts,omitempty"`
+	// Number of stamps on the order.
+	StampCount *int64 `json:"stampCount,omitempty"`
+	// The stamps of the order, with your clientReference.
+	Stamps []EstampOrderStampRef `json:"stamps,omitempty"`
+	// Document state of the order.
+	Documents *EstampOrderDocuments `json:"documents,omitempty"`
+	// Non-blocking hints, for example PAN_CARD_RECOMMENDED.
+	Advisories []EstampOrderAdvisory `json:"advisories,omitempty"`
+	// Validation findings recorded on the order.
+	Errors []json.RawMessage `json:"errors,omitempty"`
+	// Warnings recorded on the order.
+	Warnings []json.RawMessage `json:"warnings,omitempty"`
+	// Whether warnings have been acknowledged.
+	WarningsAcknowledged *bool `json:"warningsAcknowledged,omitempty"`
+	// Sandbox orders only: why the order ended badly.
+	Failure *EstampOrderFailure `json:"failure,omitempty"`
+	// Sandbox orders only: the simulation's own clock.
+	Sandbox *EstampOrderSandbox `json:"sandbox,omitempty"`
+	// When the order was created.
+	CreatedAt string `json:"createdAt,omitempty"`
+	// When the order last changed.
+	UpdatedAt string `json:"updatedAt,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampOrder) UnmarshalJSON(b []byte) error {
+	type plain EstampOrder
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampOrder) MarshalJSON() ([]byte, error) {
+	type plain EstampOrder
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampOrderList: One page of your organization's orders. items and nextCursor are the contract.
+type EstampOrderList struct {
+	// Orders of your organization, newest first.
+	Items []EstampOrder `json:"items"`
+	// Pass as cursor to fetch the next page; null on the last page.
+	NextCursor *string `json:"nextCursor,omitempty"`
+	// Same array as items, kept for clients that read the earlier documented field.
+	Data []EstampOrder `json:"data"`
+	// Page position, kept for clients that read it. Page through with nextCursor.
+	Pagination EstampPagination `json:"pagination"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampOrderList) UnmarshalJSON(b []byte) error {
+	type plain EstampOrderList
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampOrderList) MarshalJSON() ([]byte, error) {
+	type plain EstampOrderList
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampOrderExport: A small CSV export of an order for reconciliation.
+type EstampOrderExport struct {
+	// Suggested file name.
+	Filename string `json:"filename"`
+	// The export as CSV text: columns id, orderId, status, state, articleCode, denomination, providerRef, createdAt, updatedAt. It describes the order's first stamp line.
+	Csv string `json:"csv"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampOrderExport) UnmarshalJSON(b []byte) error {
+	type plain EstampOrderExport
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampOrderExport) MarshalJSON() ([]byte, error) {
+	type plain EstampOrderExport
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampPANCardStatus: State of the payer's PAN card for one stamp. Advisory: a stamp without one is not held back. After FAILED or REJECTED, send a new link with POST /v1/estamp/stamps/{stampId}/pan-card.
+type EstampPANCardStatus struct {
+	// NOT_PROVIDED (none sent), PROCESSING, VERIFIED, IN_REVIEW, REJECTED or FAILED.
+	Status string `json:"status"`
+	// Why, as a stable code, when the status is FAILED, REJECTED or IN_REVIEW; null otherwise.
+	Code *string `json:"code,omitempty"`
+	// The same, in words you can show your customer; null otherwise.
+	Message *string `json:"message,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampPANCardStatus) UnmarshalJSON(b []byte) error {
+	type plain EstampPANCardStatus
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampPANCardStatus) MarshalJSON() ([]byte, error) {
+	type plain EstampPANCardStatus
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampStamp: One stamp. Fields not reported are omitted. Further fields may be added; ignore unknown ones.
+type EstampStamp struct {
+	// Stamp id.
+	ID string `json:"id"`
+	// Your own line-level reference, if you supplied one at order creation.
+	ClientReference string `json:"clientReference,omitempty"`
+	// The order this stamp belongs to.
+	BulkOrderID string `json:"bulkOrderId,omitempty"`
+	// The issuing side's own per-stamp lifecycle status: PLACED, ASSIGNED, GENERATING, VERIFYING, VERIFIED or CANCELLED. Distinct from an order's pre-placement review status. Treat an unknown value as needing attention instead of failing.
+	Status string `json:"status"`
+	// Whether the stamp has completed verification.
+	Verified bool                 `json:"verified"`
+	PANCard  *EstampPANCardStatus `json:"panCard,omitempty"`
+	// State this stamp is issued in.
+	State string `json:"state,omitempty"`
+	// Stamp category.
+	Category string `json:"category,omitempty"`
+	// Stamp denomination amount in rupees.
+	Amount *float64 `json:"amount,omitempty"`
+	// Unique Identification Number assigned to the stamp once generated. Absent until then.
+	Uin string `json:"uin,omitempty"`
+	// Your cost-centre tag for this stamp, if you supplied one.
+	CostCentre string `json:"costCentre,omitempty"`
+	// Your business-unit tag for this stamp, if you supplied one.
+	BusinessUnit string `json:"businessUnit,omitempty"`
+	// Purpose of the stamped instrument.
+	Purpose string `json:"purpose,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampStamp) UnmarshalJSON(b []byte) error {
+	type plain EstampStamp
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampStamp) MarshalJSON() ([]byte, error) {
+	type plain EstampStamp
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampStampList: The stamps of one order.
+type EstampStampList struct {
+	// One entry per stamp, with its own lifecycle status and the state of its payer PAN card.
+	Items []EstampStamp `json:"items"`
+	// Number of items.
+	Count int64 `json:"count"`
+	// Always null today: all stamps of the order are returned.
+	NextCursor *string `json:"nextCursor,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampStampList) UnmarshalJSON(b []byte) error {
+	type plain EstampStampList
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampStampList) MarshalJSON() ([]byte, error) {
+	type plain EstampStampList
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampPANCardResult: Answer of POST /v1/estamp/stamps/{stampId}/pan-card (HTTP 202): the check runs afterwards, so panCard.status is PROCESSING. Read the final state from panCard on the stamp.
+type EstampPANCardResult struct {
+	// Stamp id.
+	StampID string              `json:"stampId"`
+	PANCard EstampPANCardStatus `json:"panCard"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampPANCardResult) UnmarshalJSON(b []byte) error {
+	type plain EstampPANCardResult
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampPANCardResult) MarshalJSON() ([]byte, error) {
+	type plain EstampPANCardResult
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampDocument: Answer of POST /v1/estamp/orders/{orderId}/documents. File content and file names are never logged. In sandbox the file is checked and accepted but nothing is stored.
+type EstampDocument struct {
+	// Id of the received document.
+	DocumentID string `json:"documentId"`
+	// The order the document was attached to.
+	OrderID string `json:"orderId"`
+	// What the file is.
+	Type string `json:"type"`
+	// The file name as sent.
+	FileName string `json:"fileName"`
+	// The content type the file was recognised as.
+	MimeType string `json:"mimeType"`
+	// File size in bytes.
+	SizeBytes int64 `json:"sizeBytes"`
+	// When the file was received.
+	ReceivedAt string `json:"receivedAt"`
+	// Always RECEIVED.
+	Status string `json:"status"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampDocument) UnmarshalJSON(b []byte) error {
+	type plain EstampDocument
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampDocument) MarshalJSON() ([]byte, error) {
+	type plain EstampDocument
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampCertificate: Certificate delivery status. Always HTTP 200: there is no 404 or 409 for a certificate that is not there yet.
+type EstampCertificate struct {
+	// Whether the certificate has been delivered and is downloadable.
+	Available bool `json:"available"`
+	// not_yet_available before delivery, available once delivered.
+	Status string `json:"status"`
+	// A StampMitra-hosted, time-limited (5 minute) presigned download URL for the certificate PDF, never a third-party URL. Only present when available is true.
+	DownloadURL string `json:"downloadUrl,omitempty"`
+	// Expiry of downloadUrl. Only present when available is true.
+	ExpiresAt string `json:"expiresAt,omitempty"`
+	// Certificate number, once issued. May be null even when available.
+	CertificateNumber *string `json:"certificateNumber,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampCertificate) UnmarshalJSON(b []byte) error {
+	type plain EstampCertificate
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampCertificate) MarshalJSON() ([]byte, error) {
+	type plain EstampCertificate
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampWalletPart: Balance, hold and available amount of one wallet.
+type EstampWalletPart struct {
+	// Current balance, as a decimal string.
+	Balance string `json:"balance"`
+	// Amount on hold, as a decimal string; null when not reported.
+	Held *string `json:"held,omitempty"`
+	// Balance less holds, as a decimal string; null when not reported.
+	Available *string `json:"available,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampWalletPart) UnmarshalJSON(b []byte) error {
+	type plain EstampWalletPart
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampWalletPart) MarshalJSON() ([]byte, error) {
+	type plain EstampWalletPart
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampWallet: Both e-Stamp wallets in one read: the Stamp Duty Wallet and, under serviceFee, the Service Fee Wallet.
+type EstampWallet struct {
+	// Stamp Duty Wallet balance, as a decimal string.
+	Balance string `json:"balance"`
+	// Stamp Duty Wallet amount on hold; null when not reported.
+	Held *string `json:"held,omitempty"`
+	// Stamp Duty Wallet balance less holds; null when not reported.
+	Available *string `json:"available,omitempty"`
+	// Always INR.
+	Currency string `json:"currency"`
+	// The Service Fee Wallet.
+	ServiceFee EstampWalletPart `json:"serviceFee"`
+	// live for a production key, test for a sandbox key.
+	Mode string `json:"mode"`
+	// true when the money is simulated (sandbox).
+	Simulated bool `json:"simulated"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampWallet) UnmarshalJSON(b []byte) error {
+	type plain EstampWallet
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampWallet) MarshalJSON() ([]byte, error) {
+	type plain EstampWallet
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// WalletBalance: Balance of one wallet.
+type WalletBalance struct {
+	// Current wallet balance, as a decimal string. Parse it before comparing; never concatenate it.
+	Balance string `json:"balance"`
+	// Always INR.
+	Currency string `json:"currency"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *WalletBalance) UnmarshalJSON(b []byte) error {
+	type plain WalletBalance
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m WalletBalance) MarshalJSON() ([]byte, error) {
+	type plain WalletBalance
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// StampDutyWalletTopup: A Stamp Duty Wallet top-up: the Razorpay order to pay and the fee breakdown. baseAmount, gstAmount and totalCharged are JSON numbers; every other amount is a 2-decimal string. Show your payer totalCharged and the fee lines from this response, not numbers you calculated, because the rate can change. The wallet is credited automatically when the payment succeeds.
+type StampDutyWalletTopup struct {
+	// The amount you asked for, in rupees (what the wallet is credited with). A JSON number on this route.
+	BaseAmount float64 `json:"baseAmount"`
+	// Processing fee rate that applied, as a percentage of baseAmount: 6.00.
+	ProcessingFeePercent string `json:"processingFeePercent"`
+	// The processing fee in rupees (6% of baseAmount), added on top of it, as a 2-decimal string. It is not credited to the wallet; a GST tax invoice is issued for it.
+	ProcessingFeeAmount string `json:"processingFeeAmount"`
+	// GST at 18% on the processing fee, in rupees (10.8 on a 60.00 fee). A JSON number. GST is never charged on baseAmount: stamp duty itself carries no GST.
+	GstAmount float64 `json:"gstAmount"`
+	// What the payer pays: baseAmount + processingFeeAmount + gstAmount (1000 + 60.00 + 10.80 = 1070.8). A JSON number. Open Razorpay Checkout with this.
+	TotalCharged float64 `json:"totalCharged"`
+	// What the wallet is credited with when the payment succeeds. Equals baseAmount: the fee and the GST are not credited. A 2-decimal string.
+	CreditAmount string `json:"creditAmount"`
+	// The top-up id: the id of the GST tax invoice for the processing fee once the payment succeeds (GET /v1/stamp-duty-wallet/invoices/{id}). Live keys only.
+	TopupID string `json:"topupId,omitempty"`
+	// Razorpay order id for Checkout. Live keys only: a sandbox top-up adds fake credit at once and opens no checkout.
+	RazorpayOrderID string `json:"razorpayOrderId,omitempty"`
+	// Razorpay key id for Checkout. Live keys only.
+	RazorpayKeyID string `json:"razorpayKeyId,omitempty"`
+	// true on a sandbox top-up.
+	Sandbox *bool `json:"sandbox,omitempty"`
+	// Sandbox only: the amount credited at once, as a decimal string.
+	Credited string `json:"credited,omitempty"`
+	// Sandbox only: the wallet balance after the fake credit, as a decimal string.
+	Balance string `json:"balance,omitempty"`
+	// Sandbox only: INR.
+	Currency string `json:"currency,omitempty"`
+	// Sandbox only: a note that nothing was charged.
+	Notice string `json:"notice,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *StampDutyWalletTopup) UnmarshalJSON(b []byte) error {
+	type plain StampDutyWalletTopup
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m StampDutyWalletTopup) MarshalJSON() ([]byte, error) {
+	type plain StampDutyWalletTopup
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// StampDutyWalletInvoice: The GST tax invoice for the PROCESSING FEE of one paid Stamp Duty top-up (not for the credited amount).
+type StampDutyWalletInvoice struct {
+	// The top-up id (the topupId the top-up response returned).
+	ID string `json:"id"`
+	// The gapless tax-invoice number.
+	InvoiceNumber *string `json:"invoiceNumber,omitempty"`
+	// The payment order of the top-up, to reconcile by.
+	RazorpayOrderID string `json:"razorpayOrderId"`
+	// The processing FEE: the taxable value of the invoice (not the credited amount), as a decimal string.
+	BaseAmount string `json:"baseAmount"`
+	// GST on the fee (18%), as a decimal string.
+	GstAmount string `json:"gstAmount"`
+	// The invoice total: fee + GST, as a decimal string. The credited amount is not on the invoice.
+	TotalCharged string `json:"totalCharged"`
+	// What the wallet was credited with (a pass-through, not on the invoice), as a decimal string.
+	CreditedAmount string `json:"creditedAmount"`
+	// The GSTIN on the invoice, when the organization has one.
+	GSTIN *string `json:"gstin,omitempty"`
+	// Whether the GSTIN was verified.
+	GSTINVerified bool `json:"gstinVerified"`
+	// Legal business name on the invoice.
+	LegalBusinessName *string `json:"legalBusinessName,omitempty"`
+	// Invoice status, for example PAID.
+	Status string `json:"status"`
+	// When the top-up was paid; null until then.
+	PaidAt *string `json:"paidAt,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *StampDutyWalletInvoice) UnmarshalJSON(b []byte) error {
+	type plain StampDutyWalletInvoice
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m StampDutyWalletInvoice) MarshalJSON() ([]byte, error) {
+	type plain StampDutyWalletInvoice
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// StampDutyWalletInvoicesPage: One page of Stamp Duty Wallet top-up fee invoices. A sandbox key always gets an empty page.
+type StampDutyWalletInvoicesPage struct {
+	// Newest first. Only paid top-ups that were issued an invoice number.
+	Items []StampDutyWalletInvoice `json:"items"`
+	// Pass as cursor to fetch the next page; null on the last page.
+	NextCursor *string `json:"nextCursor,omitempty"`
+	// Sandbox only: says that sandbox top-ups are fake credit and issue no invoices.
+	Notice string `json:"notice,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *StampDutyWalletInvoicesPage) UnmarshalJSON(b []byte) error {
+	type plain StampDutyWalletInvoicesPage
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m StampDutyWalletInvoicesPage) MarshalJSON() ([]byte, error) {
+	type plain StampDutyWalletInvoicesPage
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// ServiceFeeWalletTopup: A Service Fee Wallet top-up: the Razorpay order to pay and the GST breakdown. A GST invoice is issued for the top-up. The wallet is credited automatically when the payment succeeds.
+type ServiceFeeWalletTopup struct {
+	// The amount you asked for (what the wallet is credited with), as a decimal string.
+	BaseAmount string `json:"baseAmount"`
+	// GST added on top of baseAmount, as a decimal string.
+	GstAmount string `json:"gstAmount"`
+	// Always 0.00 for the Service Fee Wallet.
+	ProcessingFeePercent string `json:"processingFeePercent"`
+	// Always 0.00 for the Service Fee Wallet.
+	ProcessingFeeAmount string `json:"processingFeeAmount"`
+	// What the wallet is credited with when the payment succeeds. Equals baseAmount.
+	CreditAmount string `json:"creditAmount"`
+	// What the payer pays: baseAmount + gstAmount.
+	TotalCharged string `json:"totalCharged"`
+	// Razorpay order id for Checkout. Live keys only.
+	RazorpayOrderID string `json:"razorpayOrderId,omitempty"`
+	// Razorpay key id for Checkout. Live keys only.
+	RazorpayKeyID string `json:"razorpayKeyId,omitempty"`
+	// true on a sandbox top-up.
+	Sandbox *bool `json:"sandbox,omitempty"`
+	// Sandbox only: the amount credited at once, as a decimal string.
+	Credited string `json:"credited,omitempty"`
+	// Sandbox only: the wallet balance after the fake credit, as a decimal string.
+	Balance string `json:"balance,omitempty"`
+	// Sandbox only: INR.
+	Currency string `json:"currency,omitempty"`
+	// Sandbox only: a note that nothing was charged.
+	Notice string `json:"notice,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *ServiceFeeWalletTopup) UnmarshalJSON(b []byte) error {
+	type plain ServiceFeeWalletTopup
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m ServiceFeeWalletTopup) MarshalJSON() ([]byte, error) {
+	type plain ServiceFeeWalletTopup
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// WalletTransaction: One ledger row of a wallet.
+type WalletTransaction struct {
+	// Ledger row id; also the cursor to continue after this row.
+	ID string `json:"id"`
+	// Kind of movement, for example TOPUP, DEBIT or REFUND (SEED for the starting sandbox balance).
+	Type string `json:"type"`
+	// Amount of the movement, as a decimal string.
+	Amount string `json:"amount"`
+	// Wallet balance after the movement, as a decimal string.
+	BalanceAfter string `json:"balanceAfter"`
+	// What the movement relates to, for example order:<orderId> for an order debit.
+	ReferenceID string `json:"referenceId"`
+	// Human-readable description.
+	Description string `json:"description"`
+	// RAZORPAY for an online top-up on a live key, SANDBOX on a sandbox key; other modes may appear.
+	Mode string `json:"mode"`
+	// When the movement was recorded.
+	CreatedAt string `json:"createdAt"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *WalletTransaction) UnmarshalJSON(b []byte) error {
+	type plain WalletTransaction
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m WalletTransaction) MarshalJSON() ([]byte, error) {
+	type plain WalletTransaction
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// WalletTransactionsPage: One page of a wallet ledger.
+type WalletTransactionsPage struct {
+	// Ledger rows, newest first.
+	Items []WalletTransaction `json:"items"`
+	// Pass as cursor to fetch the next page; null on the last page.
+	NextCursor *string `json:"nextCursor,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *WalletTransactionsPage) UnmarshalJSON(b []byte) error {
+	type plain WalletTransactionsPage
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m WalletTransactionsPage) MarshalJSON() ([]byte, error) {
+	type plain WalletTransactionsPage
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// WalletInvoice: A GST tax invoice for one Service Fee Wallet top-up.
+type WalletInvoice struct {
+	// Invoice id.
+	ID string `json:"id"`
+	// The tax invoice number; null until one is issued.
+	InvoiceNumber *string `json:"invoiceNumber,omitempty"`
+	// The top-up amount credited, as a decimal string.
+	BaseAmount string `json:"baseAmount"`
+	// GST on the top-up, as a decimal string.
+	GstAmount string `json:"gstAmount"`
+	// baseAmount + gstAmount, as a decimal string.
+	TotalCharged string `json:"totalCharged"`
+	// The GSTIN the invoice was issued to.
+	GSTIN *string `json:"gstin,omitempty"`
+	// Whether the GSTIN was verified.
+	GSTINVerified bool `json:"gstinVerified"`
+	// Legal business name on the invoice.
+	LegalBusinessName *string `json:"legalBusinessName,omitempty"`
+	// Invoice status, for example PAID.
+	Status string `json:"status"`
+	// When the top-up was paid; null until then.
+	PaidAt *string `json:"paidAt,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *WalletInvoice) UnmarshalJSON(b []byte) error {
+	type plain WalletInvoice
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m WalletInvoice) MarshalJSON() ([]byte, error) {
+	type plain WalletInvoice
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// WalletInvoicesPage: One page of Service Fee Wallet top-up invoices. A sandbox top-up is fake credit and produces no invoice, so a sandbox key always gets an empty page.
+type WalletInvoicesPage struct {
+	// Invoices, newest first.
+	Items []WalletInvoice `json:"items"`
+	// Pass as cursor to fetch the next page; null on the last page.
+	NextCursor *string `json:"nextCursor,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *WalletInvoicesPage) UnmarshalJSON(b []byte) error {
+	type plain WalletInvoicesPage
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m WalletInvoicesPage) MarshalJSON() ([]byte, error) {
+	type plain WalletInvoicesPage
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
 // UsagePeriod: an API object.
 type UsagePeriod struct {
 	// Period start.
@@ -867,5 +2540,547 @@ func (m *UsageDay) UnmarshalJSON(b []byte) error {
 // MarshalJSON encodes known fields and merges Extra back in.
 func (m UsageDay) MarshalJSON() ([]byte, error) {
 	type plain UsageDay
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// Money: Wallet cash balance (includes any leftover signup credit). Zero for a sandbox key.
+type Money struct {
+	// Amount in paise (integer).
+	Paise int64 `json:"paise"`
+	// Amount in rupees (paise / 100).
+	Rupees float64 `json:"rupees"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *Money) UnmarshalJSON(b []byte) error {
+	type plain Money
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m Money) MarshalJSON() ([]byte, error) {
+	type plain Money
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountEstimatedCalls: an API object.
+type AccountEstimatedCalls struct {
+	// available / cheapest approved product price; null when none.
+	AtCheapestPrice *int64 `json:"atCheapestPrice,omitempty"`
+	// The cheapest approved, priced product.
+	CheapestProduct *AccountCheapestProduct `json:"cheapestProduct,omitempty"`
+	// available / your average billed price over the last 7 days; null without billed calls.
+	AtSevenDayAverage *int64 `json:"atSevenDayAverage,omitempty"`
+	// Average billed price per call over the last 7 days.
+	SevenDayAverageCost *Money `json:"sevenDayAverageCost,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountEstimatedCalls) UnmarshalJSON(b []byte) error {
+	type plain AccountEstimatedCalls
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountEstimatedCalls) MarshalJSON() ([]byte, error) {
+	type plain AccountEstimatedCalls
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountLastTopUp: Newest top-up, base amount credited (GST excluded); null when never topped up.
+type AccountLastTopUp struct {
+	// Base amount credited.
+	Amount Money `json:"amount"`
+	// When it was credited.
+	At string `json:"at"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountLastTopUp) UnmarshalJSON(b []byte) error {
+	type plain AccountLastTopUp
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountLastTopUp) MarshalJSON() ([]byte, error) {
+	type plain AccountLastTopUp
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountSignupCredit: an API object.
+type AccountSignupCredit struct {
+	// Signup credit granted (zero when never).
+	Granted Money `json:"granted"`
+	// Part of it still left in the balance.
+	Left Money `json:"left"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountSignupCredit) UnmarshalJSON(b []byte) error {
+	type plain AccountSignupCredit
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountSignupCredit) MarshalJSON() ([]byte, error) {
+	type plain AccountSignupCredit
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountUsagePeriod: an API object.
+type AccountUsagePeriod struct {
+	// IST calendar month, YYYY-MM.
+	Month string `json:"month"`
+	// Start of the month, 00:00 IST, as a UTC instant.
+	From string `json:"from"`
+	// End of the covered period (now for the current month, the last millisecond of the month for the previous one).
+	To string `json:"to"`
+	// Always false: spend is the price-book price before GST.
+	GstIncluded bool `json:"gstIncluded"`
+	// Calls recorded on the metered product routes (/v1/verify, /v1/estamp, /v1/esign), including calls stopped before the provider (402, 429).
+	Requests int64 `json:"requests"`
+	// Calls that were billed.
+	BilledRequests int64 `json:"billedRequests"`
+	// Calls with HTTP status 400 or above that were not billed.
+	FailedNotBilled int64 `json:"failedNotBilled"`
+	// Calls with HTTP status below 400 that were not billed (sandbox calls, unpriced products).
+	SuccessNotBilled int64 `json:"successNotBilled"`
+	// Calls whose debit is waiting to be applied; their amount is not in spend yet.
+	PendingBilling int64 `json:"pendingBilling"`
+	// Spend on the billed calls, BEFORE GST.
+	Spend Money `json:"spend"`
+	// Per product, most requests first.
+	ByProduct []AccountUsageProduct `json:"byProduct"`
+	// One entry per IST day, zero-filled: day 1 up to today for the current month, the whole previous month.
+	Daily []AccountUsageDay `json:"daily"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountUsagePeriod) UnmarshalJSON(b []byte) error {
+	type plain AccountUsagePeriod
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountUsagePeriod) MarshalJSON() ([]byte, error) {
+	type plain AccountUsagePeriod
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountUsageToday: an API object.
+type AccountUsageToday struct {
+	// Today in IST, YYYY-MM-DD.
+	Date string `json:"date"`
+	// Calls today.
+	Requests int64 `json:"requests"`
+	// Billed calls today.
+	BilledRequests int64 `json:"billedRequests"`
+	// Failed, not billed calls today.
+	FailedNotBilled int64 `json:"failedNotBilled"`
+	// Spend today before GST.
+	Spend          Money             `json:"spend"`
+	RequestsPerDay AccountUsageQuota `json:"requestsPerDay"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountUsageToday) UnmarshalJSON(b []byte) error {
+	type plain AccountUsageToday
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountUsageToday) MarshalJSON() ([]byte, error) {
+	type plain AccountUsageToday
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountUsageLimits: an API object.
+type AccountUsageLimits struct {
+	RequestsPerMinute AccountUsageLimit `json:"requestsPerMinute"`
+	RequestsPerDay    AccountUsageLimit `json:"requestsPerDay"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountUsageLimits) UnmarshalJSON(b []byte) error {
+	type plain AccountUsageLimits
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountUsageLimits) MarshalJSON() ([]byte, error) {
+	type plain AccountUsageLimits
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampRequirementsState: The state the requirements are for. Further fields may be added.
+type EstampRequirementsState struct {
+	// State code.
+	Code string `json:"code,omitempty"`
+	// State name.
+	Name string `json:"name,omitempty"`
+	// Whether the state accepts orders right now.
+	Active *bool `json:"active,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampRequirementsState) UnmarshalJSON(b []byte) error {
+	type plain EstampRequirementsState
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampRequirementsState) MarshalJSON() ([]byte, error) {
+	type plain EstampRequirementsState
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampRequirementsArticle: The resolved article; null when articleCode was not given.
+type EstampRequirementsArticle struct {
+	// Article code.
+	Code string `json:"code,omitempty"`
+	// true when the article takes no second party.
+	IsSecondPartyNA *bool `json:"isSecondPartyNA,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampRequirementsArticle) UnmarshalJSON(b []byte) error {
+	type plain EstampRequirementsArticle
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampRequirementsArticle) MarshalJSON() ([]byte, error) {
+	type plain EstampRequirementsArticle
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampDenominationRules: The denomination rules for the article.
+type EstampDenominationRules struct {
+	// The denomination you asked for, or null.
+	Provided *float64 `json:"provided,omitempty"`
+	// Smallest accepted denomination, or null.
+	Min *float64 `json:"min,omitempty"`
+	// Largest accepted denomination, or null for no limit.
+	Max *float64 `json:"max,omitempty"`
+	// When present, the only accepted denominations. Render a dropdown of exactly these.
+	AllowedAmounts []float64 `json:"allowedAmounts,omitempty"`
+	// When present, the denomination must be a whole multiple of this step (otherwise AMOUNT_NOT_MULTIPLE).
+	MultipleOf *float64 `json:"multipleOf,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampDenominationRules) UnmarshalJSON(b []byte) error {
+	type plain EstampDenominationRules
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampDenominationRules) MarshalJSON() ([]byte, error) {
+	type plain EstampDenominationRules
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampRequirementField: One field requirement. Unknown further properties may appear; ignore them.
+type EstampRequirementField struct {
+	// Field name, for example firstParty, secondParty, district, sro, propertyArea, payerGender, panCardImage.
+	Field string `json:"field,omitempty"`
+	// Same value as field in the sandbox catalogue spelling.
+	Name string `json:"name,omitempty"`
+	// true when validate and create reject the order if the field is blank. With articleCode, denomination or category given, conditional rules are already resolved to this boolean.
+	Required bool `json:"required"`
+	// A conditional rule, present only while it could not be resolved (no articleCode, denomination or category given).
+	RequiredWhen map[string]json.RawMessage `json:"requiredWhen,omitempty"`
+	// true for an advisory field that is never blocking (panCardImage).
+	Recommended *bool `json:"recommended,omitempty"`
+	// Whether the issuing side enforces the field.
+	EnforcedByBulkAPI *bool `json:"enforcedByBulkApi,omitempty"`
+	// What the field is for.
+	Description string `json:"description,omitempty"`
+	// When present, the accepted values.
+	AllowedValues []string `json:"allowedValues,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampRequirementField) UnmarshalJSON(b []byte) error {
+	type plain EstampRequirementField
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampRequirementField) MarshalJSON() ([]byte, error) {
+	type plain EstampRequirementField
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampRequirementsExample: A valid single-stamp request body for this combination, generated from the resolved fields (only fields marked required are added, plus the always-needed ones). Its names and values are illustrations. Ready to send to POST /v1/estamp/orders/validate.
+type EstampRequirementsExample struct {
+	// One generated stamp line.
+	Stamps []EstampStampLine `json:"stamps"`
+}
+
+// EstampOrderDocuments: Document state of the order.
+type EstampOrderDocuments struct {
+	// MISSING until a PAN link or file has been received, then RECEIVED.
+	PANCard string `json:"panCard,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampOrderDocuments) UnmarshalJSON(b []byte) error {
+	type plain EstampOrderDocuments
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampOrderDocuments) MarshalJSON() ([]byte, error) {
+	type plain EstampOrderDocuments
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampOrderFailure: Sandbox orders only: why the order ended badly.
+type EstampOrderFailure struct {
+	// Failure code.
+	Code string `json:"code"`
+	// Failure text.
+	Message string `json:"message"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampOrderFailure) UnmarshalJSON(b []byte) error {
+	type plain EstampOrderFailure
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampOrderFailure) MarshalJSON() ([]byte, error) {
+	type plain EstampOrderFailure
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampOrderSandbox: Sandbox orders only: the simulation's own clock.
+type EstampOrderSandbox struct {
+	// The scenario the order follows.
+	Scenario string `json:"scenario,omitempty"`
+	// When the order entered its current status.
+	StatusChangedAt string `json:"statusChangedAt,omitempty"`
+	// When the next status change happens by itself; null when terminal.
+	NextStatusAt *string `json:"nextStatusAt,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampOrderSandbox) UnmarshalJSON(b []byte) error {
+	type plain EstampOrderSandbox
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampOrderSandbox) MarshalJSON() ([]byte, error) {
+	type plain EstampOrderSandbox
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// EstampPagination: Page position, kept for clients that read it. Page through with nextCursor.
+type EstampPagination struct {
+	// Page number served.
+	Page int64 `json:"page"`
+	// Page size served.
+	Limit int64 `json:"limit"`
+	// Exact on the last page of a page-numbered walk; null while more pages follow (use nextCursor).
+	Total *int64 `json:"total,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *EstampPagination) UnmarshalJSON(b []byte) error {
+	type plain EstampPagination
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m EstampPagination) MarshalJSON() ([]byte, error) {
+	type plain EstampPagination
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountCheapestProduct: The cheapest approved, priced product.
+type AccountCheapestProduct struct {
+	// Service code.
+	ServiceCode string `json:"serviceCode"`
+	// Product name.
+	Name string `json:"name"`
+	// Price per call before GST.
+	Price Money `json:"price"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountCheapestProduct) UnmarshalJSON(b []byte) error {
+	type plain AccountCheapestProduct
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountCheapestProduct) MarshalJSON() ([]byte, error) {
+	type plain AccountCheapestProduct
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountUsageProduct: an API object.
+type AccountUsageProduct struct {
+	// Service code, e.g. pan.verify.
+	ServiceCode string `json:"serviceCode"`
+	// Product name.
+	Name string `json:"name"`
+	// Calls recorded on the metered product routes (/v1/verify, /v1/estamp, /v1/esign), including calls stopped before the provider (402, 429).
+	Requests int64 `json:"requests"`
+	// Calls that were billed.
+	BilledRequests int64 `json:"billedRequests"`
+	// Calls with HTTP status 400 or above that were not billed.
+	FailedNotBilled int64 `json:"failedNotBilled"`
+	// Calls with HTTP status below 400 that were not billed (sandbox calls, unpriced products).
+	SuccessNotBilled int64 `json:"successNotBilled"`
+	// Calls whose debit is waiting to be applied; their amount is not in spend yet.
+	PendingBilling int64 `json:"pendingBilling"`
+	// Spend on the billed calls, BEFORE GST.
+	Spend Money `json:"spend"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountUsageProduct) UnmarshalJSON(b []byte) error {
+	type plain AccountUsageProduct
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountUsageProduct) MarshalJSON() ([]byte, error) {
+	type plain AccountUsageProduct
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountUsageDay: an API object.
+type AccountUsageDay struct {
+	// IST day, YYYY-MM-DD.
+	Date string `json:"date"`
+	// Calls recorded on the metered product routes (/v1/verify, /v1/estamp, /v1/esign), including calls stopped before the provider (402, 429).
+	Requests int64 `json:"requests"`
+	// Calls that were billed.
+	BilledRequests int64 `json:"billedRequests"`
+	// Calls with HTTP status 400 or above that were not billed.
+	FailedNotBilled int64 `json:"failedNotBilled"`
+	// Calls with HTTP status below 400 that were not billed (sandbox calls, unpriced products).
+	SuccessNotBilled int64 `json:"successNotBilled"`
+	// Calls whose debit is waiting to be applied; their amount is not in spend yet.
+	PendingBilling int64 `json:"pendingBilling"`
+	// Spend on the billed calls, BEFORE GST.
+	Spend Money `json:"spend"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountUsageDay) UnmarshalJSON(b []byte) error {
+	type plain AccountUsageDay
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountUsageDay) MarshalJSON() ([]byte, error) {
+	type plain AccountUsageDay
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountUsageQuota: an API object.
+type AccountUsageQuota struct {
+	// Per-day request cap; null = none enforced.
+	Limit *int64 `json:"limit,omitempty"`
+	// Calls today.
+	Used int64 `json:"used"`
+	// limit - used; null when there is no cap.
+	Remaining *int64 `json:"remaining,omitempty"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountUsageQuota) UnmarshalJSON(b []byte) error {
+	type plain AccountUsageQuota
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountUsageQuota) MarshalJSON() ([]byte, error) {
+	type plain AccountUsageQuota
+	return encodeWithExtra(plain(m), m.Extra)
+}
+
+// AccountUsageLimit: an API object.
+type AccountUsageLimit struct {
+	// Requests per minute (the X-RateLimit-Limit of verification routes); null = no cap.
+	Limit  *int64 `json:"limit,omitempty"`
+	Source string `json:"source"`
+
+	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
+	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// UnmarshalJSON decodes known fields and keeps the rest in Extra.
+func (m *AccountUsageLimit) UnmarshalJSON(b []byte) error {
+	type plain AccountUsageLimit
+	return decodeWithExtra(b, (*plain)(m), &m.Extra)
+}
+
+// MarshalJSON encodes known fields and merges Extra back in.
+func (m AccountUsageLimit) MarshalJSON() ([]byte, error) {
+	type plain AccountUsageLimit
 	return encodeWithExtra(plain(m), m.Extra)
 }

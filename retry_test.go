@@ -231,7 +231,7 @@ func TestEveryAutoKeyPostCarriesFreshKeyAndIsRetried(t *testing.T) {
 	}
 }
 
-func TestReplayIsNotRetriedWithoutKey(t *testing.T) {
+func TestReplayIsNeverRetried(t *testing.T) {
 	env := newEnv(t, statusSeq(`{"id":"e","status":"QUEUED"}`, 503, 200))
 	_, err := env.c.Webhooks.Events.Replay(context.Background(), "evt_1")
 	if !IsUpstream(err) {
@@ -241,13 +241,13 @@ func TestReplayIsNotRetriedWithoutKey(t *testing.T) {
 	if len(reqs) != 1 || reqs[0].Header.Get("Idempotency-Key") != "" {
 		t.Fatalf("attempts %d, key %q", len(reqs), reqs[0].Header.Get("Idempotency-Key"))
 	}
-	// ... but is when the caller supplies a key
+	// ... and not even when the caller supplies a key: replay is x-retry-safe=false, sent once, no key
 	env = newEnv(t, statusSeq(`{"id":"e","status":"QUEUED"}`, 503, 200))
-	if _, err := env.c.Webhooks.Events.Replay(context.Background(), "evt_1", WithIdempotencyKey("k")); err != nil {
+	if _, err := env.c.Webhooks.Events.Replay(context.Background(), "evt_1", WithIdempotencyKey("k")); !IsUpstream(err) {
 		t.Fatal(err)
 	}
-	if n := len(env.rec.all()); n != 2 {
-		t.Fatalf("attempts = %d", n)
+	if r := env.rec.all(); len(r) != 1 || r[0].Header.Get("Idempotency-Key") != "" {
+		t.Fatalf("attempts = %d", len(r))
 	}
 }
 

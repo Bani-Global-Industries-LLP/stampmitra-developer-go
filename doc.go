@@ -2,7 +2,7 @@
 // verification (PAN, GSTIN, vehicle RC, Voter ID, driving licence, passport, CIN, Udyam, bank
 // account) and e-Stamp Paper, plus orders, payment intents, usage, request logs and webhook events.
 //
-// The SDK is pre-1.0 (0.1.0): the API surface may change in minor releases, so pin your version.
+// The SDK is pre-1.0 (0.2.0): the API surface may change in minor releases, so pin your version.
 // It needs Go 1.21 or newer and uses only the standard library.
 //
 // # Quickstart
@@ -23,10 +23,15 @@
 //
 // # Resources
 //
-// A Client exposes one field per API area: Verify, Services, Estamp, Orders, Payments.Intents,
-// Usage, Logs and Webhooks.Events. Every method takes a context.Context first and optional
+// A Client exposes one field per API area: Verify, Services, Estamp (with Estamp.Orders and
+// Estamp.Stamps), StampDutyWallet, ServiceFeeWallet, Account, Orders, Payments.Intents, Usage,
+// Logs and Webhooks.Events. Every method takes a context.Context first and optional
 // RequestOption values last (WithRequestTimeout, WithRequestMaxRetries, WithIdempotencyKey,
 // WithRequestHeader, WithRawResponse).
+//
+// e-Stamp orders: validate with Estamp.Orders.Validate, create with Estamp.Orders.Create (an
+// Idempotency-Key is sent automatically), upload the payer's PAN card with UploadDocument, then read
+// the stamps and their certificates. A party is a bare name or an object: see Party.
 //
 // Orders are addressed by YOUR externalOrderId: Orders.Create returns it, and Orders.Get,
 // GetStatus, GetPayment, ListDocuments, GetDocumentDownload and Estamp.AddParties take it.
@@ -40,7 +45,7 @@
 //
 // # Errors
 //
-// Non-2xx responses are returned as *APIError (Status, Code, Message, RequestID, Field, RetryAfter).
+// Non-2xx responses are returned as *APIError (Status, Code, Message, RequestID, Field, RetryAfter, FieldErrors, Wallet).
 // Classify errors with errors.Is and the Err* sentinels, or the Is* helpers:
 //
 //	var apiErr *stampmitra.APIError
@@ -60,11 +65,13 @@
 //
 // By default a call is attempted up to three times (WithMaxRetries(2)) with exponential backoff
 // and full jitter (500ms base, 8s cap). Retry-After is honoured, capped at 60s. 429, 502, 503, 504,
-// connection errors and timeouts are retried; other statuses are not. GET is always retry-safe.
-// The API honours Idempotency-Key on every metered POST, so the SDK sends a random UUIDv4 key
-// with every POST except webhook replay (or the key you pass with WithIdempotencyKey) and re-uses
-// the SAME key on every automatic retry, so a retried verification is never billed twice. A POST
-// without a key (webhook replay) is never retried.
+// connection errors and timeouts are retried, as is a 409 IDEMPOTENCY_IN_PROGRESS on a keyed
+// request; other statuses are not. GET is always retry-safe.
+// The API honours Idempotency-Key on metered POSTs, order creation and document upload, so the SDK
+// sends a random UUIDv4 key with each of them (or the key you pass with WithIdempotencyKey) and
+// re-uses the SAME key on every automatic retry, so a retried verification or order is never billed
+// twice. Order and stamp cancel, replace, PAN-card link, both wallet top-ups and webhook replay are
+// never retried and send no key; Estamp.Orders.Validate is a dry run and is retried like a GET.
 //
 // # Pagination
 //

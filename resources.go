@@ -218,7 +218,13 @@ func (s *ServicesService) Get(ctx context.Context, serviceCode string, opts ...R
 
 // EstampService groups e-Stamp reference data and duty/party helpers. Responses are
 // *GenericResponse because the API does not fix their shape; no field is dropped.
-type EstampService struct{ c *Client }
+type EstampService struct {
+	c *Client
+	// Orders validates, creates and reads e-Stamp orders.
+	Orders *EstampOrdersService
+	// Stamps reads and changes single stamps.
+	Stamps *EstampStampsService
+}
 
 // GetSchema returns the input-field schema for an e-Stamp service (GET /v1/estamp/schema/{serviceCode}).
 func (s *EstampService) GetSchema(ctx context.Context, serviceCode string, opts ...RequestOption) (*GenericResponse, error) {
@@ -584,12 +590,12 @@ func (s *WebhookEventsService) List(ctx context.Context, p *WebhookEventsListPar
 	return call[GenericResponse](ctx, s.c, http.MethodGet, "/v1/webhooks/events", q, nil, false, opts)
 }
 
-// Replay re-delivers one webhook event (POST /v1/webhooks/events/{id}/replay). Replay carries no
-// automatic Idempotency-Key and is therefore never auto-retried unless you pass WithIdempotencyKey.
+// Replay re-delivers one webhook event (POST /v1/webhooks/events/{id}/replay). It is sent exactly
+// once, carries no Idempotency-Key and is never retried automatically.
 func (s *WebhookEventsService) Replay(ctx context.Context, eventID string, opts ...RequestOption) (*GenericResponse, error) {
 	seg, err := validatePathID("id", eventID)
 	if err != nil {
 		return nil, err
 	}
-	return call[GenericResponse](ctx, s.c, http.MethodPost, "/v1/webhooks/events/"+seg+"/replay", nil, nil, false, opts)
+	return callWith[GenericResponse](ctx, s.c, http.MethodPost, "/v1/webhooks/events/"+seg+"/replay", nil, nil, false, retryNever, opts)
 }
