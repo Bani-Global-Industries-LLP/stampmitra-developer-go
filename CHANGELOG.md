@@ -6,6 +6,33 @@ to [Semantic Versioning](https://semver.org/) (pre-1.0: minor versions may break
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-24
+
+Tracks API contract 1.2.0 (62 operations, up from 31). Pre-1.0: this release contains breaking changes, listed under *Changed*.
+
+### Added
+- e-Stamp orders: `Estamp.Orders` (`Validate`, `Create`, `List`, `ListAll`, `Get`, `Cancel`, `Export`, `ListStamps`, `UploadDocument`) and
+  `Estamp.Stamps` (`Get`, `Cancel`, `Replace`, `SetPANCard`, `GetCertificate`).
+- e-Stamp reference data: `Estamp.GetStatesAvailability`, `GetState`, `GetStateRequirements` (with its `ExampleBody`), `ListDistricts`, `ListSROs`, `GetWallet`.
+- `StampDutyWallet` and `ServiceFeeWallet` (`GetBalance`, `Topup`, `ListTransactions`, `ListInvoices`, `GetInvoice` and `ListAll*` iterators) and
+  `Account` (`GetBalance`, `GetUsage`).
+- `Party` (a bare name string or an `EstampParty` object), `EstampPropertyArea`, and the new request and response types.
+- `APIError.FieldErrors` (`error.details.errors[]`), `APIError.Wallet` (`WalletStampDuty` / `WalletServiceFee` on a 402) and `APIError.Details`.
+- Generic `Iterator[T]` for cursor-paginated lists.
+- `Estamp.Orders.Create` sends an auto-generated `Idempotency-Key` when you pass none (the API requires one); `UploadDocument` sends `multipart/form-data` (uploaded content and file names are never logged).
+- Retry rules from the 1.2.0 contract: a 409 `IDEMPOTENCY_IN_PROGRESS` on a keyed request is retried after `Retry-After`; `Estamp.Orders.Validate` (a dry run) is retried without a key.
+- Examples: `examples/estamp_order`.
+
+### Changed
+- **Breaking:** `Estamp.Orders.Cancel`, `Estamp.Stamps.Cancel`, `Estamp.Stamps.Replace`, `Estamp.Stamps.SetPANCard`, both wallet `Topup` methods and
+  `Webhooks.Events.Replay` are never retried automatically and send no `Idempotency-Key`. `Webhooks.Events.Replay` used to be retried when you passed `WithIdempotencyKey`.
+- HTTP 422 now matches `ErrValidation` (it matched nothing before).
+- **Breaking:** verification result models follow contract 1.2.0 and gain many fields (including `VerificationID`); types changed where the API changed them:
+  `VoterIDVerification.Age` is a `string`, `CINVerification.RegistrationNumber` is an `int64`, `PANToUdyam.UdyamNumber` is a `*string`;
+  `GSTINVerification.GSTIN` now holds the lower-case `gstin` field and the legacy upper-case `GSTIN` field is `GSTINLegacy`.
+- Debug logging masks the new e-Stamp personal-data fields (parties, PAN card link, payer phone).
+- Spec snapshot, shared retry scenarios and docs refreshed to contract 1.2.0; the conformance suite now covers all 62 operations and all 411 golden fixtures.
+
 ## [0.1.0] - 2026-10-16
 
 ### Added
@@ -19,5 +46,6 @@ to [Semantic Versioning](https://semver.org/) (pre-1.0: minor versions may break
 - Bundled OpenAPI snapshot, a spec-coverage test, a conformance suite against the spec repo's mock server, runnable examples.
 - `baseURL` must be https (loopback http allowed) with no credentials; redirects are never followed; the API key and webhook secret are redacted from `fmt` output, errors and logs.
 
-[Unreleased]: https://github.com/Bani-Global-Industries-LLP/stampmitra-developer-go/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Bani-Global-Industries-LLP/stampmitra-developer-go/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Bani-Global-Industries-LLP/stampmitra-developer-go/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Bani-Global-Industries-LLP/stampmitra-developer-go/releases/tag/v0.1.0

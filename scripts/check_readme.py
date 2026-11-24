@@ -15,8 +15,8 @@ src = open(os.path.join(root, "README.md"), encoding="utf-8").read()
 blocks = re.findall(r"```go\n(.*?)```", src, re.S)
 out = [
     "package readmecheck\n",
-    'import (\n"context"\n"errors"\n"fmt"\n"io"\n"log"\n"net/http"\n stampmitra "github.com/Bani-Global-Industries-LLP/stampmitra-developer-go"\n)\n',
-    "var _ = errors.New\nvar _ = fmt.Sprint\nvar _ = io.EOF\nvar _ = log.Println\nvar _ http.Handler\nvar _ context.Context\n",
+    'import (\n"context"\n"errors"\n"fmt"\n"io"\n"log"\n"net/http"\n"os"\n stampmitra "github.com/Bani-Global-Industries-LLP/stampmitra-developer-go"\n)\n',
+    "var _ = errors.New\nvar _ = fmt.Sprint\nvar _ = io.EOF\nvar _ = log.Println\nvar _ http.Handler\nvar _ = os.Open\nvar _ context.Context\n",
 ]
 for i, b in enumerate(blocks):
     if b.startswith("package main"):
