@@ -87,16 +87,46 @@ func checkHeader(k, v string) error {
 	return nil
 }
 
+// retryPolicy says when a call may be repeated automatically.
+type retryPolicy int
+
+const (
+	// retryDefault: a GET is always retried; a POST is retried only when it carries an Idempotency-Key.
+	retryDefault retryPolicy = iota
+	// retryNever marks operations the API documents as not retry-safe (x-retry-safe: false): order
+	// cancel, stamp cancel, replace, PAN-card link, wallet top-ups and webhook replay. They are sent
+	// exactly once, whatever the response, and never carry an Idempotency-Key.
+	retryNever
+	// retrySafe marks a POST that is retry-safe without a key (x-retry-safe: true, no Idempotency-Key
+	// parameter), such as the dry-run order validation.
+	retrySafe
+)
+
+// rawBody is a request body that is sent as is (multipart/form-data). Its bytes are re-sent unchanged on every attempt.
+type rawBody struct {
+	contentType string
+	data        []byte
+}
+
 // call performs one API call and decodes the JSON body into a new T.
 func call[T any](ctx context.Context, c *Client, method, path string, query url.Values, body any, autoKey bool, opts []RequestOption) (*T, error) {
+	return callWith[T](ctx, c, method, path, query, body, autoKey, retryDefault, opts)
+}
+
+// callWith is call with an explicit retry policy.
+func callWith[T any](ctx context.Context, c *Client, method, path string, query url.Values, body any, autoKey bool, pol retryPolicy, opts []RequestOption) (*T, error) {
 	var out T
-	if err := c.do(ctx, method, path, query, body, &out, autoKey, opts); err != nil {
+	if err := c.doWith(ctx, method, path, query, body, &out, autoKey, pol, opts); err != nil {
 		return nil, err
 	}
 	return &out, nil
 }
 
 func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, out any, autoKey bool, opts []RequestOption) error {
+	return c.doWith(ctx, method, path, query, body, out, autoKey, retryDefault, opts)
+}
+
+func (c *Client) doWith(ctx context.Context, method, path string, query url.Values, body, out any, autoKey bool, pol retryPolicy, opts []RequestOption) error {
 	if ctx == nil {
 		return &ValidationError{Message: "context must not be nil"}
 	}
@@ -130,7 +160,12 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	}
 
 	var payload []byte
-	if body != nil {
+	contentType := "application/json"
+	switch b := body.(type) {
+	case nil:
+	case rawBody:
+		payload, contentType = b.data, b.contentType
+	default:
 		var err error
 		if payload, err = json.Marshal(body); err != nil {
 			return &ValidationError{Message: "request body cannot be encoded as JSON: " + err.Error()}
@@ -141,7 +176,9 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	if key != "" && strings.ContainsAny(key, "\r\n\x00") {
 		return &ValidationError{Field: "idempotencyKey", Message: "contains invalid characters"}
 	}
-	if key == "" && method == http.MethodPost && autoKey {
+	if pol == retryNever {
+		key = "" // these operations take no Idempotency-Key
+	} else if key == "" && method == http.MethodPost && autoKey {
 		var err error
 		if key, err = newUUIDv4(); err != nil {
 			return err
@@ -149,7 +186,8 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	}
 	// GET is always retry-safe; a POST is retried only when it carries an Idempotency-Key, which
 	// the server honours by replaying the original result instead of repeating (or billing) the work.
-	canRetry := method == http.MethodGet || key != ""
+	// retryNever overrides everything; retrySafe lets a keyless dry-run POST be retried.
+	canRetry := pol != retryNever && (method == http.MethodGet || key != "" || pol == retrySafe)
 
 	target := c.baseURL + path
 	if len(query) > 0 {
@@ -157,7 +195,7 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	}
 
 	for attempt := 0; ; attempt++ {
-		status, hdr, respBody, err := c.attempt(ctx, method, target, payload, key, &rc, timeout, attempt+1)
+		status, hdr, respBody, err := c.attempt(ctx, method, target, payload, contentType, key, &rc, timeout, attempt+1)
 		var retryAfter time.Duration
 		if err == nil {
 			if status >= 200 && status < 300 {
@@ -177,7 +215,7 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 			retryAfter = apiErr.RetryAfter
 			err = apiErr
 			c.captureRaw(&rc, status, hdr, respBody, attempt+1, apiErr.RequestID)
-			if !isRetryableStatus(status) {
+			if !isRetryableStatus(status) && !(canRetry && isIdempotencyInProgress(apiErr)) {
 				return err
 			}
 		} else {
@@ -204,6 +242,13 @@ func (c *Client) captureRaw(rc *requestConfig, status int, hdr http.Header, body
 		return
 	}
 	*rc.raw = Response{StatusCode: status, Header: hdr.Clone(), Attempts: attempts, RequestID: requestID, Body: append([]byte(nil), body...)}
+}
+
+// isIdempotencyInProgress reports a 409 IDEMPOTENCY_IN_PROGRESS: the first request with this key is
+// still running, and the API asks for the identical request to be sent again after Retry-After.
+// Any other 409 is a state conflict that retrying cannot fix.
+func isIdempotencyInProgress(e *APIError) bool {
+	return e.Status == http.StatusConflict && e.Code == "IDEMPOTENCY_IN_PROGRESS"
 }
 
 func isRetryableStatus(s int) bool {
@@ -254,7 +299,7 @@ func parseRetryAfter(v string, now time.Time) time.Duration {
 
 // attempt performs one HTTP round trip. It returns a *ConnectionError for transport failures and
 // the context's error when the caller's context ended.
-func (c *Client) attempt(ctx context.Context, method, target string, payload []byte, key string, rc *requestConfig, timeout time.Duration, n int) (int, http.Header, []byte, error) {
+func (c *Client) attempt(ctx context.Context, method, target string, payload []byte, contentType, key string, rc *requestConfig, timeout time.Duration, n int) (int, http.Header, []byte, error) {
 	actx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -281,7 +326,7 @@ func (c *Client) attempt(ctx context.Context, method, target string, payload []b
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", c.userAgent)
 	if payload != nil {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", contentType)
 	}
 	if key != "" {
 		req.Header.Set("Idempotency-Key", key)
@@ -289,7 +334,7 @@ func (c *Client) attempt(ctx context.Context, method, target string, payload []b
 	start := c.now()
 	if c.logger != nil && c.logger.Enabled(ctx, slog.LevelDebug) {
 		c.logger.LogAttrs(ctx, slog.LevelDebug, "stampmitra request", slog.String("method", method), slog.String("url", target),
-			slog.Int("attempt", n), slog.Any("headers", redactHeaders(req.Header)), slog.String("body", RedactBody(payload)))
+			slog.Int("attempt", n), slog.Any("headers", redactHeaders(req.Header)), slog.String("body", loggableBody(contentType, payload)))
 	}
 
 	resp, err := c.http.Do(req)
@@ -333,6 +378,14 @@ func sanitizeTransportErr(err error) error {
 	return err
 }
 
+// loggableBody never lets uploaded file content reach a log: only JSON bodies are logged (masked).
+func loggableBody(contentType string, payload []byte) string {
+	if contentType != "application/json" {
+		return "[" + strings.SplitN(contentType, ";", 2)[0] + " body, " + strconv.Itoa(len(payload)) + " bytes]"
+	}
+	return RedactBody(payload)
+}
+
 func newAPIError(status int, hdr http.Header, body []byte, attempts int) *APIError {
 	e := &APIError{Status: status, Attempts: attempts, Message: "HTTP " + strconv.Itoa(status), RequestID: hdr.Get("X-Request-Id")}
 	e.RetryAfter = parseRetryAfter(hdr.Get("Retry-After"), time.Now())
@@ -348,6 +401,14 @@ func newAPIError(status int, hdr http.Header, body []byte, attempts int) *APIErr
 			Field     string `json:"field"`
 		} `json:"error"`
 	}
+	var rawEnv struct {
+		Error struct {
+			Details json.RawMessage `json:"details"`
+		} `json:"error"`
+	}
+	if json.Unmarshal(body, &rawEnv) == nil && len(rawEnv.Error.Details) > 0 && string(rawEnv.Error.Details) != "null" {
+		e.Details = rawEnv.Error.Details
+	}
 	if json.Unmarshal(body, &env) == nil && env.Error != nil {
 		e.Code = env.Error.Code
 		if env.Error.Message != "" {
@@ -357,6 +418,13 @@ func newAPIError(status int, hdr http.Header, body []byte, attempts int) *APIErr
 			e.RequestID = env.Error.RequestID
 		}
 		e.Field = env.Error.Field
+		var det struct {
+			Errors []FieldIssue `json:"errors"`
+			Wallet string       `json:"wallet"`
+		}
+		if json.Unmarshal(e.Details, &det) == nil { // tolerate an unexpected shape: keep Code and Message
+			e.FieldErrors, e.Wallet = det.Errors, det.Wallet
+		}
 	}
 	return e
 }
