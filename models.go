@@ -1531,7 +1531,7 @@ type EstampState struct {
 	FatherHusbandNameRequired *bool `json:"fatherHusbandNameRequired,omitempty"`
 	// Whether the first party's address is needed. null means not known, not no.
 	FirstPartyAddressRequired *bool `json:"firstPartyAddressRequired,omitempty"`
-	// Whether the state asks for the payer's PAN card. Recommended, never blocking. null means not known.
+	// Whether the state asks for the payer's PAN card. Whether the state asks for it; the order is accepted without it but the stamp cannot be completed until a PAN card is on file. null means not known.
 	PANCardImageRequired *bool `json:"panCardImageRequired,omitempty"`
 	// How many articles the state offers.
 	InstrumentCount *int64 `json:"instrumentCount,omitempty"`
@@ -1635,7 +1635,7 @@ func (m EstampRequirements) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// EstampOrderQuote: Priced totals in rupees. Never recalculate or override them. What the customer pays for the order is faceValueTotal + serviceFeeTotal + gstOnFee.
+// EstampOrderQuote: Priced totals in rupees. Never recalculate or override them. A sandbox key gets the same figures a live key would for the same lines. What the customer pays for the order is faceValueTotal + serviceFeeTotal + gstOnFee.
 type EstampOrderQuote struct {
 	// Government duty (face value) for the whole order, in rupees. Paid from the Stamp Duty Wallet.
 	FaceValueTotal float64 `json:"faceValueTotal"`
@@ -1643,7 +1643,7 @@ type EstampOrderQuote struct {
 	ServiceFeeTotal float64 `json:"serviceFeeTotal"`
 	// GST on the service charges, in rupees.
 	GstOnFee float64 `json:"gstOnFee"`
-	// What the Service Fee Wallet is debited when the order is created (the service charges net of GST), in rupees.
+	// What the Service wallet is debited when the order is created (the service charges net of GST), in rupees.
 	ServiceWalletDebitTotal float64 `json:"serviceWalletDebitTotal"`
 
 	// Extra holds response fields this SDK version does not model, so nothing the API sends is lost.
@@ -1693,7 +1693,7 @@ func (m EstampValidationIssue) MarshalJSON() ([]byte, error) {
 type EstampDocumentRequirement struct {
 	// What is asked for.
 	Type string `json:"type"`
-	// Always false: the payer's PAN card is advisory and an order is never held back for want of it.
+	// Always false: an order is accepted without the payer's PAN card, but the stamp cannot be completed until one is on file.
 	Required bool `json:"required"`
 	// true when the state asks for a PAN card.
 	Recommended bool `json:"recommended"`
@@ -1933,7 +1933,7 @@ func (m EstampOrderExport) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// EstampPANCardStatus: State of the payer's PAN card for one stamp. Advisory: a stamp without one is not held back. After FAILED or REJECTED, send a new link with POST /v1/estamp/stamps/{stampId}/pan-card.
+// EstampPANCardStatus: State of the payer's PAN card for one stamp. A stamp without one is accepted but cannot be completed until a PAN card is on file. After FAILED or REJECTED, send a new link with POST /v1/estamp/stamps/{stampId}/pan-card.
 type EstampPANCardStatus struct {
 	// NOT_PROVIDED (none sent), PROCESSING, VERIFIED, IN_REVIEW, REJECTED or FAILED.
 	Status string `json:"status"`
@@ -2138,7 +2138,7 @@ func (m EstampWalletPart) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// EstampWallet: Both e-Stamp wallets in one read: the Stamp Duty Wallet and, under serviceFee, the Service Fee Wallet.
+// EstampWallet: Both wallets in one read: the Stamp Duty Wallet and, under serviceFee, your Service wallet (the field name is kept for compatibility).
 type EstampWallet struct {
 	// Stamp Duty Wallet balance, as a decimal string.
 	Balance string `json:"balance"`
@@ -2148,7 +2148,7 @@ type EstampWallet struct {
 	Available *string `json:"available,omitempty"`
 	// Always INR.
 	Currency string `json:"currency"`
-	// The Service Fee Wallet.
+	// Your Service wallet (the field name is kept for compatibility). The same balance pays for verification calls and for the service charges of an e-Stamp order.
 	ServiceFee EstampWalletPart `json:"serviceFee"`
 	// live for a production key, test for a sandbox key.
 	Mode string `json:"mode"`
@@ -2309,15 +2309,15 @@ func (m StampDutyWalletInvoicesPage) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// ServiceFeeWalletTopup: A Service Fee Wallet top-up: the Razorpay order to pay and the GST breakdown. A GST invoice is issued for the top-up. The wallet is credited automatically when the payment succeeds.
+// ServiceFeeWalletTopup: A Service wallet top-up (the route keeps its service-fee-wallet name for compatibility): the Razorpay order to pay and the GST breakdown. A GST invoice is issued for the top-up. The wallet is credited automatically when the payment succeeds.
 type ServiceFeeWalletTopup struct {
 	// The amount you asked for (what the wallet is credited with), as a decimal string.
 	BaseAmount string `json:"baseAmount"`
 	// GST added on top of baseAmount, as a decimal string.
 	GstAmount string `json:"gstAmount"`
-	// Always 0.00 for the Service Fee Wallet.
+	// Always 0.00 for the Service wallet.
 	ProcessingFeePercent string `json:"processingFeePercent"`
-	// Always 0.00 for the Service Fee Wallet.
+	// Always 0.00 for the Service wallet.
 	ProcessingFeeAmount string `json:"processingFeeAmount"`
 	// What the wallet is credited with when the payment succeeds. Equals baseAmount.
 	CreditAmount string `json:"creditAmount"`
@@ -2412,7 +2412,7 @@ func (m WalletTransactionsPage) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// WalletInvoice: A GST tax invoice for one Service Fee Wallet top-up.
+// WalletInvoice: A GST tax invoice for one Service wallet top-up.
 type WalletInvoice struct {
 	// Invoice id.
 	ID string `json:"id"`
@@ -2451,7 +2451,7 @@ func (m WalletInvoice) MarshalJSON() ([]byte, error) {
 	return encodeWithExtra(plain(m), m.Extra)
 }
 
-// WalletInvoicesPage: One page of Service Fee Wallet top-up invoices. A sandbox top-up is fake credit and produces no invoice, so a sandbox key always gets an empty page.
+// WalletInvoicesPage: One page of Service wallet top-up invoices. A sandbox top-up is fake credit and produces no invoice, so a sandbox key always gets an empty page.
 type WalletInvoicesPage struct {
 	// Invoices, newest first.
 	Items []WalletInvoice `json:"items"`

@@ -220,7 +220,7 @@ type EstampStampLine struct {
 	CessAmount float64 `json:"cessAmount,omitempty"`
 	// Property area { unit, value }. Needed when the state's propertyAreaRequired flag is true.
 	PropertyArea *EstampPropertyArea `json:"propertyArea,omitempty"`
-	// https link to the stamp-duty payer's PAN card (JPG, PNG, WebP, GIF, HEIC or PDF) on the default port, with no credentials, downloadable without a login. Optional and advisory: it never blocks an order. You can also send or replace it later with POST /v1/estamp/stamps/{stampId}/pan-card, or upload the file with POST /v1/estamp/orders/{orderId}/documents.
+	// https link to the stamp-duty payer's PAN card (JPG, PNG, WebP, GIF, HEIC or PDF) on the default port, with no credentials, downloadable without a login. You can place an order without it, but the PAN card is mandatory to complete the stamp: until one is on file the stamp waits. You can also send or replace it later with POST /v1/estamp/stamps/{stampId}/pan-card, or upload the file with POST /v1/estamp/orders/{orderId}/documents.
 	PANCardImage string `json:"panCardImage,omitempty"`
 	// Your own cost-centre tag, for internal cost allocation.
 	CostCentre string `json:"costCentre,omitempty"`

@@ -2,10 +2,10 @@
   "openapi": "3.1.0",
   "info": {
     "title": "StampMitra Developer API",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "x-api-version": "v1",
     "summary": "Indian identity verification and e-Stamp Paper APIs for the StampMitra developer portal.",
-    "description": "The API-key Developer Suite: verification (PAN, GSTIN, vehicle RC, Voter ID, Driving Licence, Passport, CIN, Udyam, bank account), e-Stamp Paper (catalogue, duty, typed orders, stamps, PAN card, certificates), the Stamp Duty and Service Fee wallets, usage and request logs, and webhook events. Generated from the same data as the docs at https://developer.stampmitra.in.\n\nAuthentication: send your API key as `Authorization: Bearer <key>` or `x-api-key: <key>`. Sandbox keys (sk_test_) and production keys (sk_live_) use the same host; the key prefix selects the environment. Sandbox keys are free and get 20% of each endpoint's production rate limit (minimum 1 request per window); production calls are metered per successful call.\n\nErrors: every error is `{ error: { code, message, requestId } }` (plus `field` where an input is at fault, and `details` on some errors: `details.errors[]` lists every finding of a rejected e-Stamp order body as `{ field, code, message, index }`, `details.wallet` names the wallet that is short on a 402). Send an `X-Request-Id` header and it is echoed back as `requestId`. See `x-error-codes`, which lists both the envelope codes and the per-field codes.\n\nIdempotency: send an `Idempotency-Key` header on operations that accept it (metered verification and duty/parties calls, order creation, payment intents) to make retries safe. The same key and request replays the stored response; the same key with a different request is 422 `IDEMPOTENCY_KEY_REUSED`; the same key while the first request is still running is 409 `IDEMPOTENCY_IN_PROGRESS` with `Retry-After`. Keys are scoped to your organization, the route and the environment and are kept for 24 hours. `x-idempotent` and `x-retry-safe` mark each operation.\n\nResponse headers on authenticated calls (additive, safe to ignore): `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` (seconds) on rate-limited routes, `Retry-After` on every 429 and 503, and for live keys `X-Wallet-State` (OK, LOW_BALANCE, FINISHED) and `X-Wallet-Balance-Low: true`. Read the exact balance with GET /v1/account/balance; guide: https://developer.stampmitra.in/docs/balance-usage-and-rate-limits.\n\nWebhooks: outbound order events are signed. `x-webhook-signature` and the top-level `webhooks` section describe the headers and the HMAC-SHA256 construction.\n\nVersioning: Contract version (info.version) follows semantic versioning, independent of the URL version (x-api-version: v1; every path is under /v1). MAJOR: any breaking change to the published contract (removed or renamed operationId, path, field or enum value; changed status code, error shape or required-ness; a /v2 prefix). Generated SDKs bump their major version too. MINOR: backwards-compatible additions (new endpoint, new optional request field, new response field, new error code or webhook event). Clients must ignore unknown response fields and treat unknown enum values as unknown-safe. PATCH: documentation, description and example corrections that do not change behaviour.",
+    "description": "The API-key Developer Suite: verification (PAN, GSTIN, vehicle RC, Voter ID, Driving Licence, Passport, CIN, Udyam, bank account), e-Stamp Paper (catalogue, duty, typed orders, stamps, PAN card, certificates), the Service wallet (one balance for verification calls and e-Stamp service charges) and the Stamp Duty wallet, usage and request logs, and webhook events. Generated from the same data as the docs at https://developer.stampmitra.in.\n\nAuthentication: send your API key as `Authorization: Bearer <key>` or `x-api-key: <key>`. Sandbox keys (sk_test_) and production keys (sk_live_) use the same host; the key prefix selects the environment. Sandbox keys are free and get 20% of each endpoint's production rate limit (minimum 1 request per window); production calls are metered per successful call. Every API also has a daily limit per organisation and environment (calls per API per day, reset at 00:00 IST): 100 on Sandbox, 100 on pay-as-you-go, 500 on Business, agreed per deal on a commercial plan. Over it the call gets 429 `DAILY_API_LIMIT_REACHED` and is not charged. Sandbox keys also keep two older limits next to it, both reset at 00:00 IST: 200 calls a day across all APIs for the organisation (`SANDBOX_DAILY_LIMIT`) and 50 sandbox calls a day from one IP address (`SANDBOX_IP_LIMIT`).\n\nErrors: every error is `{ error: { code, message, requestId } }` (plus `field` where an input is at fault, and `details` on some errors: `details.errors[]` lists every finding of a rejected e-Stamp order body as `{ field, code, message, index }`, `details.wallet` names the wallet that is short on a 402). Send an `X-Request-Id` header and it is echoed back as `requestId`. See `x-error-codes`, which lists both the envelope codes and the per-field codes.\n\nIdempotency: send an `Idempotency-Key` header on operations that accept it (metered verification and duty/parties calls, order creation, payment intents) to make retries safe. The same key and request replays the stored response; the same key with a different request is 422 `IDEMPOTENCY_KEY_REUSED`; the same key while the first request is still running is 409 `IDEMPOTENCY_IN_PROGRESS` with `Retry-After`. Keys are scoped to your organization, the route and the environment and are kept for 24 hours. `x-idempotent` and `x-retry-safe` mark each operation.\n\nResponse headers on authenticated calls (additive, safe to ignore): `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` (seconds) on rate-limited routes, `X-RateLimit-Daily-Limit`, `X-RateLimit-Daily-Remaining` and `X-RateLimit-Daily-Reset` (an ISO 8601 timestamp with +05:30) for the API called on metered verification routes, `Retry-After` on every 429 and 503, and for live keys `X-Wallet-State` (OK, LOW_BALANCE, FINISHED) and `X-Wallet-Balance-Low: true`. Read the exact balance with GET /v1/account/balance; guide: https://developer.stampmitra.in/docs/balance-usage-and-rate-limits.\n\nWebhooks: outbound order events are signed. `x-webhook-signature` and the top-level `webhooks` section describe the headers and the HMAC-SHA256 construction.\n\nVersioning: Contract version (info.version) follows semantic versioning, independent of the URL version (x-api-version: v1; every path is under /v1). MAJOR: any breaking change to the published contract (removed or renamed operationId, path, field or enum value; changed status code, error shape or required-ness; a /v2 prefix). Generated SDKs bump their major version too. MINOR: backwards-compatible additions (new endpoint, new optional request field, new response field, new error code or webhook event). Clients must ignore unknown response fields and treat unknown enum values as unknown-safe. PATCH: documentation, description and example corrections that do not change behaviour.",
     "termsOfService": "https://developer.stampmitra.in/legal/developer-terms",
     "contact": {
       "name": "StampMitra Developer Support",
@@ -273,7 +273,7 @@
       "post": {
         "operationId": "verifyPan",
         "summary": "Verify PAN",
-        "description": "Validates and verifies a PAN. Requires the `verification.pan.read` scope on the API key. Metered as `pan.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/pan`, including its `referenceId` field.",
+        "description": "Validates and verifies a PAN. Requires the `verification.pan.read` scope on the API key. Metered as `pan.verify` after a successful response - usage is only recorded (and the Service wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/pan`, including its `referenceId` field.",
         "tags": [
           "Verification"
         ],
@@ -386,7 +386,7 @@
       "post": {
         "operationId": "verifyGstin",
         "summary": "Verify GSTIN",
-        "description": "Validates and verifies a GSTIN. Requires the `verification.gstin.read` scope on the API key. Metered as `gstin.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/gstin`, including its `referenceId` field.",
+        "description": "Validates and verifies a GSTIN. Requires the `verification.gstin.read` scope on the API key. Metered as `gstin.verify` after a successful response - usage is only recorded (and the Service wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/gstin`, including its `referenceId` field.",
         "tags": [
           "Verification"
         ],
@@ -558,7 +558,7 @@
       "post": {
         "operationId": "verifyVehicleRc",
         "summary": "Verify Vehicle RC",
-        "description": "Validates and verifies a Vehicle RC. Requires the `verification.rc.read` scope on the API key. Metered as `rc.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/rc`, including its `referenceId` field.",
+        "description": "Validates and verifies a Vehicle RC. Requires the `verification.rc.read` scope on the API key. Metered as `rc.verify` after a successful response - usage is only recorded (and the Service wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/rc`, including its `referenceId` field.",
         "tags": [
           "Verification"
         ],
@@ -671,7 +671,7 @@
       "post": {
         "operationId": "verifyVoterId",
         "summary": "Verify Voter ID",
-        "description": "Validates and verifies a Voter ID. Requires the `verification.voter.read` scope on the API key. Metered as `voter.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/voter-id`, including its `referenceId` field.",
+        "description": "Validates and verifies a Voter ID. Requires the `verification.voter.read` scope on the API key. Metered as `voter.verify` after a successful response - usage is only recorded (and the Service wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/voter-id`, including its `referenceId` field.",
         "tags": [
           "Verification"
         ],
@@ -812,7 +812,7 @@
       "post": {
         "operationId": "verifyDrivingLicense",
         "summary": "Verify Driving Licence",
-        "description": "Validates and verifies a Driving Licence. Requires the `verification.dl.read` scope on the API key. Metered as `dl.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/driving-license`, including its `referenceId` field.",
+        "description": "Validates and verifies a Driving Licence. Requires the `verification.dl.read` scope on the API key. Metered as `dl.verify` after a successful response - usage is only recorded (and the Service wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/driving-license`, including its `referenceId` field.",
         "tags": [
           "Verification"
         ],
@@ -1019,7 +1019,7 @@
       "post": {
         "operationId": "verifyPassport",
         "summary": "Verify Passport",
-        "description": "Validates and verifies a Passport. Requires the `verification.passport.read` scope on the API key. Metered as `passport.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/passport`, including its `referenceId` field.",
+        "description": "Validates and verifies a Passport. Requires the `verification.passport.read` scope on the API key. Metered as `passport.verify` after a successful response - usage is only recorded (and the Service wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/passport`, including its `referenceId` field.",
         "tags": [
           "Verification"
         ],
@@ -1127,7 +1127,7 @@
       "post": {
         "operationId": "verifyCin",
         "summary": "Verify Company CIN",
-        "description": "Validates and verifies a Company CIN. Requires the `verification.cin.read` scope on the API key. Metered as `cin.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/cin`, including its `referenceId` field.",
+        "description": "Validates and verifies a Company CIN. Requires the `verification.cin.read` scope on the API key. Metered as `cin.verify` after a successful response - usage is only recorded (and the Service wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/cin`, including its `referenceId` field.",
         "tags": [
           "Verification"
         ],
@@ -1264,7 +1264,7 @@
       "post": {
         "operationId": "verifyUdyam",
         "summary": "Verify Udyam Registration",
-        "description": "Validates and verifies a Udyam Registration. Requires the `verification.udyam.read` scope on the API key. Metered as `udyam.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/udyam`, including its `referenceId` field.",
+        "description": "Validates and verifies a Udyam Registration. Requires the `verification.udyam.read` scope on the API key. Metered as `udyam.verify` after a successful response - usage is only recorded (and the Service wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/udyam`, including its `referenceId` field.",
         "tags": [
           "Verification"
         ],
@@ -1454,7 +1454,7 @@
       "post": {
         "operationId": "lookupGstinsByPan",
         "summary": "Verify PAN to GSTIN",
-        "description": "Validates and verifies a PAN to GSTIN. Requires the `verification.pan_to_gstin.read` scope on the API key. Metered as `pan.to_gstin` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/pan-to-gstin`, including its `referenceId` field.",
+        "description": "Validates and verifies a PAN to GSTIN. Requires the `verification.pan_to_gstin.read` scope on the API key. Metered as `pan.to_gstin` after a successful response - usage is only recorded (and the Service wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/pan-to-gstin`, including its `referenceId` field.",
         "tags": [
           "Verification"
         ],
@@ -1560,7 +1560,7 @@
       "post": {
         "operationId": "lookupUdyamByPan",
         "summary": "Verify PAN to Udyam",
-        "description": "Validates and verifies a PAN to Udyam. Requires the `verification.pan_to_udyam.read` scope on the API key. Metered as `pan.to_udyam` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/pan-to-udyam`, including its `referenceId` field.",
+        "description": "Validates and verifies a PAN to Udyam. Requires the `verification.pan_to_udyam.read` scope on the API key. Metered as `pan.to_udyam` after a successful response - usage is only recorded (and the Service wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/pan-to-udyam`, including its `referenceId` field.",
         "tags": [
           "Verification"
         ],
@@ -1664,7 +1664,7 @@
       "post": {
         "operationId": "verifyBankAccount",
         "summary": "Verify Bank Account",
-        "description": "Validates and verifies a Bank Account. Requires the `verification.bank-account.read` scope on the API key. Metered as `bank-account.verify` after a successful response - usage is only recorded (and the fulfilment wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/bank-account`, including its `referenceId` field.",
+        "description": "Validates and verifies a Bank Account. Requires the `verification.bank-account.read` scope on the API key. Metered as `bank-account.verify` after a successful response - usage is only recorded (and the Service wallet debited, for priced services) once verification completes successfully. The response below is the exact real shape returned by `/v1/verify/bank-account`, including its `referenceId` field.",
         "tags": [
           "Verification"
         ],
@@ -2629,7 +2629,7 @@
       "post": {
         "operationId": "calculateEstampDuty",
         "summary": "Calculate authoritative e-Stamp duty + service charges",
-        "description": "Runs the one authoritative pricing calculation; the response amount is never recalculated or overridden client-side. Requires the `estamp.duty.calculate` scope. Metered against your fulfilment wallet.",
+        "description": "Runs the one authoritative pricing calculation; the response amount is never recalculated or overridden client-side. A sandbox key is priced with the same rates and arithmetic as a live key. Requires the `estamp.duty.calculate` scope. Metered against your Service wallet.",
         "tags": [
           "e-Stamp"
         ],
@@ -2722,7 +2722,7 @@
       "post": {
         "operationId": "addEstampOrderParties",
         "summary": "Attach/correct e-Stamp order party (customer) details",
-        "description": "Attaches or corrects the customer/party details on an existing e-Stamp order. Requires the `estamp.parties.write` scope. Metered against your fulfilment wallet.",
+        "description": "Attaches or corrects the customer/party details on an existing e-Stamp order. Requires the `estamp.parties.write` scope. Metered against your Service wallet.",
         "tags": [
           "e-Stamp"
         ],
@@ -2827,7 +2827,7 @@
       "post": {
         "operationId": "createOrder",
         "summary": "Create an order (generic - works for any entitled serviceCode, including e-Stamp)",
-        "description": "Generic order-creation endpoint. For e-Stamp, pass an e-Stamp `serviceCode` (from GET /v1/services) and put instrument/party/value details in the free-form `details` object. There is no e-Stamp-specific request/response contract yet (no first-class `state`, `article`, `parties[]` fields) - the shape of `details` for e-Stamp is not finalized upstream.",
+        "description": "LEGACY generic order endpoint, kept for existing integrations. To order e-Stamps use `POST /v1/estamp/orders` (and `POST /v1/estamp/orders/validate` first): it takes typed `stamps[]` lines with `state`, `articleCode`, `denomination`, `firstParty`, `secondParty`, `propertyArea` and the payer's `panCardImage`, and is checked field by field. This generic route takes a free-form `details` object that is not validated against any e-Stamp contract, so an order placed here cannot be relied on to carry the fields the issuing side needs, including the PAN card link.",
         "tags": [
           "e-Stamp"
         ],
@@ -2856,9 +2856,9 @@
                 "externalCustomerId": "cust_ext_456",
                 "serviceCode": "estamp.instrument.rent_agreement",
                 "details": {
-                  "state": "MH",
-                  "stampValue": 500,
-                  "note": "Shape not finalized - illustrative only"
+                  "state": null,
+                  "stampValue": null,
+                  "note": "Free-form and not validated. Use POST /v1/estamp/orders for e-Stamp."
                 }
               }
             }
@@ -3070,7 +3070,8 @@
                     "secondParty": {
                       "name": "John Smith"
                     },
-                    "purpose": "Rental Agreement"
+                    "purpose": "Rental Agreement",
+                    "panCardImage": "https://cdn.example.com/kyc/pan-4417.jpg"
                   },
                   {
                     "clientReference": "line-002",
@@ -3084,7 +3085,8 @@
                     "secondParty": {
                       "name": "Acme Pvt Ltd"
                     },
-                    "purpose": "Indemnity Bond"
+                    "purpose": "Indemnity Bond",
+                    "panCardImage": "https://cdn.example.com/kyc/pan-4418.jpg"
                   }
                 ]
               }
@@ -3211,7 +3213,7 @@
       "post": {
         "operationId": "createEstampOrder",
         "summary": "Create an e-Stamp order (pending internal review)",
-        "description": "Creates an e-Stamp order. This reaches StampMitra's validation stage and debits the duty from your Stamp Duty Wallet and the service fee from your Service Fee Wallet; it does NOT place the order with the issuing vendor, because a person confirms placement separately. The returned `status` is therefore a pre-placement status (PENDING_REVIEW on a live key), never a completed order. Requires an `Idempotency-Key` header: the same key and the same body replays the original response, with no second order and no second debit. A short wallet is a 402 PAYMENT_REQUIRED naming the wallet, and nothing is created. Requires the `estamp.orders.create` scope. Rate limit: 30 requests per 60 seconds. Where the per-order API fee is enabled for your account, one charge applies per created order.",
+        "description": "Creates an e-Stamp order. This reaches StampMitra's validation stage and debits the duty from your Stamp Duty Wallet and the service charges (99 procurement + 5 API charge per paper, plus 18% GST collected at top-up) from your Service wallet, the same balance that pays for verification calls; it does NOT place the order with the issuing vendor, because a person confirms placement separately. The returned `status` is therefore a pre-placement status (PENDING_REVIEW on a live key), never a completed order. Requires an `Idempotency-Key` header: the same key and the same body replays the original response, with no second order and no second debit. A short wallet is a 402 PAYMENT_REQUIRED naming the wallet (`error.details.wallet` is STAMP_DUTY or SERVICE_FEE), and nothing is created. Requires the `estamp.orders.create` scope. Rate limit: 30 requests per 60 seconds. Where the per-order API fee is enabled for your account, one charge applies per created order.",
         "tags": [
           "e-Stamp"
         ],
@@ -3251,7 +3253,8 @@
                     "secondParty": {
                       "name": "John Smith"
                     },
-                    "purpose": "Rental Agreement"
+                    "purpose": "Rental Agreement",
+                    "panCardImage": "https://cdn.example.com/kyc/pan-4417.jpg"
                   },
                   {
                     "clientReference": "line-002",
@@ -3265,7 +3268,8 @@
                     "secondParty": {
                       "name": "Acme Pvt Ltd"
                     },
-                    "purpose": "Indemnity Bond"
+                    "purpose": "Indemnity Bond",
+                    "panCardImage": "https://cdn.example.com/kyc/pan-4418.jpg"
                   }
                 ]
               }
@@ -3310,7 +3314,7 @@
                     {
                       "code": "PAN_CARD_RECOMMENDED",
                       "field": "panCardImage",
-                      "message": "Maharashtra asks for the payer's PAN card. Send panCardImage on each stamp, POST /stamps/{id}/pan-card, or upload it to the order. The order is not held back without it."
+                      "message": "Maharashtra asks for the payer's PAN card. Send panCardImage on each stamp, POST /stamps/{id}/pan-card, or upload it to the order. The order is accepted without it, but the stamp cannot be completed until a PAN card is on file."
                     }
                   ],
                   "errors": [],
@@ -3353,7 +3357,7 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "402": {
-            "description": "PAYMENT_REQUIRED: the Stamp Duty Wallet or the Service Fee Wallet cannot cover the order (error.details.wallet is STAMP_DUTY or SERVICE_FEE; where the per-order API fee is enabled the API credit wallet can be the short one). Nothing was created and nothing was charged. Top up that wallet and retry with the same Idempotency-Key.",
+            "description": "PAYMENT_REQUIRED: the Stamp Duty Wallet or the Service wallet cannot cover the order (error.details.wallet is STAMP_DUTY or SERVICE_FEE, and SERVICE_FEE means the Service wallet; where the per-order API fee is enabled it is charged to the same Service wallet). Nothing was created and nothing was charged. Top up that wallet and retry with the same Idempotency-Key.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3500,7 +3504,7 @@
                         {
                           "code": "PAN_CARD_RECOMMENDED",
                           "field": "panCardImage",
-                          "message": "Maharashtra asks for the payer's PAN card. Send panCardImage on each stamp, POST /stamps/{id}/pan-card, or upload it to the order. The order is not held back without it."
+                          "message": "Maharashtra asks for the payer's PAN card. Send panCardImage on each stamp, POST /stamps/{id}/pan-card, or upload it to the order. The order is accepted without it, but the stamp cannot be completed until a PAN card is on file."
                         }
                       ],
                       "errors": [],
@@ -3542,7 +3546,7 @@
                         {
                           "code": "PAN_CARD_RECOMMENDED",
                           "field": "panCardImage",
-                          "message": "Maharashtra asks for the payer's PAN card. Send panCardImage on each stamp, POST /stamps/{id}/pan-card, or upload it to the order. The order is not held back without it."
+                          "message": "Maharashtra asks for the payer's PAN card. Send panCardImage on each stamp, POST /stamps/{id}/pan-card, or upload it to the order. The order is accepted without it, but the stamp cannot be completed until a PAN card is on file."
                         }
                       ],
                       "errors": [],
@@ -3672,7 +3676,7 @@
                     {
                       "code": "PAN_CARD_RECOMMENDED",
                       "field": "panCardImage",
-                      "message": "Maharashtra asks for the payer's PAN card. Send panCardImage on each stamp, POST /stamps/{id}/pan-card, or upload it to the order. The order is not held back without it."
+                      "message": "Maharashtra asks for the payer's PAN card. Send panCardImage on each stamp, POST /stamps/{id}/pan-card, or upload it to the order. The order is accepted without it, but the stamp cannot be completed until a PAN card is on file."
                     }
                   ],
                   "errors": [],
@@ -3774,7 +3778,7 @@
                     {
                       "code": "PAN_CARD_RECOMMENDED",
                       "field": "panCardImage",
-                      "message": "Maharashtra asks for the payer's PAN card. Send panCardImage on each stamp, POST /stamps/{id}/pan-card, or upload it to the order. The order is not held back without it."
+                      "message": "Maharashtra asks for the payer's PAN card. Send panCardImage on each stamp, POST /stamps/{id}/pan-card, or upload it to the order. The order is accepted without it, but the stamp cannot be completed until a PAN card is on file."
                     }
                   ],
                   "errors": [],
@@ -4209,7 +4213,7 @@
       "get": {
         "operationId": "getEstampWallet",
         "summary": "Both e-Stamp wallets in one read",
-        "description": "The Stamp Duty Wallet and, nested under `serviceFee`, the Service Fee Wallet, in one answer. Needs both wallet read scopes, `stamp-duty-wallet.read` and `service-fee-wallet.read`. `held` and `available` are null when they are not reported; sandbox money is simulated (`mode` test, `simulated` true). Rate limit: 60 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
+        "description": "The Stamp Duty Wallet and, nested under `serviceFee`, the Service wallet, in one answer. The `serviceFee` field name is kept for compatibility: its value is your Service wallet balance, the same one verification calls and the dashboard header show. Needs both wallet read scopes, `stamp-duty-wallet.read` and `service-fee-wallet.read`. `held` and `available` are null when they are not reported; sandbox money is simulated (`mode` test, `simulated` true). Rate limit: 60 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
         "tags": [
           "Wallets"
         ],
@@ -4704,8 +4708,8 @@
     "/v1/service-fee-wallet": {
       "get": {
         "operationId": "getServiceFeeWalletBalance",
-        "summary": "Get the Service Fee Wallet balance",
-        "description": "The Service Fee Wallet pays the procurement and API charges of an order, net of GST. The balance is a decimal string: parse it before comparing. Requires the `service-fee-wallet.read` scope. Rate limit: 60 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
+        "summary": "Get the Service wallet balance",
+        "description": "The Service wallet is one balance: it pays for verification calls and, on an e-Stamp order, the procurement charge (99 per paper) and the API charge (5 per paper), net of the GST collected at top-up. Kept for compatibility: this is your Service wallet. The balance is a decimal string: parse it before comparing. Requires the `service-fee-wallet.read` scope. Rate limit: 60 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
         "tags": [
           "Wallets"
         ],
@@ -4757,8 +4761,8 @@
     "/v1/service-fee-wallet/topup": {
       "post": {
         "operationId": "topupServiceFeeWallet",
-        "summary": "Create a Razorpay order to top up the Service Fee Wallet",
-        "description": "Returns the Razorpay order to complete in Checkout. GST is added on top of `baseAmount`, so `totalCharged` is the base plus GST; the wallet is credited with `baseAmount` and a GST invoice is issued for the top-up (see the invoices routes). Requires the `service-fee-wallet.topup` scope. Rate limit: 20 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
+        "summary": "Create a Razorpay order to top up the Service wallet",
+        "description": "Returns the Razorpay order to complete in Checkout. GST is added on top of `baseAmount`, so `totalCharged` is the base plus GST (the minimum top-up is 1,000 before GST); the Service wallet is credited with `baseAmount` and a GST invoice is issued for the top-up (see the invoices routes). Kept for compatibility: this is your Service wallet. Requires the `service-fee-wallet.topup` scope. Rate limit: 20 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
         "tags": [
           "Wallets"
         ],
@@ -4856,8 +4860,8 @@
     "/v1/service-fee-wallet/transactions": {
       "get": {
         "operationId": "listServiceFeeWalletTransactions",
-        "summary": "Paginated Service Fee Wallet ledger",
-        "description": "The wallet's ledger, newest first. Page with `nextCursor`. Requires the `service-fee-wallet.read` scope. Rate limit: 60 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
+        "summary": "Paginated Service wallet ledger",
+        "description": "The Service wallet's ledger, newest first. Page with `nextCursor`. Kept for compatibility: this is your Service wallet. Requires the `service-fee-wallet.read` scope. Rate limit: 60 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
         "tags": [
           "Wallets"
         ],
@@ -4959,8 +4963,8 @@
     "/v1/service-fee-wallet/invoices": {
       "get": {
         "operationId": "listServiceFeeWalletInvoices",
-        "summary": "List Service Fee Wallet top-up invoices",
-        "description": "The GST tax invoices issued for Service Fee Wallet top-ups, newest first. Page with `nextCursor`. A sandbox top-up is fake credit and produces no invoice, so a sandbox key always gets an empty page. Requires the `service-fee-wallet.invoices.read` scope. Rate limit: 60 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
+        "summary": "List Service wallet top-up invoices",
+        "description": "The GST tax invoices issued for Service wallet top-ups, newest first. Page with `nextCursor`. Kept for compatibility: this is your Service wallet. A sandbox top-up is fake credit and produces no invoice, so a sandbox key always gets an empty page. Requires the `service-fee-wallet.invoices.read` scope. Rate limit: 60 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
         "tags": [
           "Wallets"
         ],
@@ -5054,8 +5058,8 @@
     "/v1/service-fee-wallet/invoices/{id}": {
       "get": {
         "operationId": "getServiceFeeWalletInvoice",
-        "summary": "Get one Service Fee Wallet top-up invoice",
-        "description": "One GST tax invoice of your organization. A 404 means no such invoice exists for your organization (always the case for a sandbox key). Requires the `service-fee-wallet.invoices.read` scope. Rate limit: 60 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
+        "summary": "Get one Service wallet top-up invoice",
+        "description": "One GST tax invoice of your organization for a Service wallet top-up. Kept for compatibility: this is your Service wallet. A 404 means no such invoice exists for your organization (always the case for a sandbox key). Requires the `service-fee-wallet.invoices.read` scope. Rate limit: 60 requests per 60 seconds. Access depends on the key: if you get 401 or 403, ask support to enable the wallet scopes. Sandbox keys have them.",
         "tags": [
           "Wallets"
         ],
@@ -5269,7 +5273,7 @@
       "post": {
         "operationId": "uploadEstampOrderDocument",
         "summary": "Upload the payer's PAN card for an order",
-        "description": "Attaches the stamp-duty payer's PAN card (PDF, JPEG or PNG, at most 10 MB) to an order as multipart/form-data: a `file` part and an optional `type` part (only `pan_card`). Optional and advisory: an order is never held back for want of it. The file's first bytes are checked against its declared type. Send an `Idempotency-Key` header to make a retry replay the first answer. File content and file names are never logged. In sandbox the file is checked and accepted but nothing is stored. Requires the `estamp.documents.write` scope. Rate limit: 30 requests per 60 seconds.",
+        "description": "Attaches the stamp-duty payer's PAN card (PDF, JPEG or PNG, at most 10 MB) to an order as multipart/form-data: a `file` part and an optional `type` part (only `pan_card`). Optional to place the order, mandatory to complete it: the order is accepted without it, but the stamp cannot be completed until a PAN card is on file. The file's first bytes are checked against its declared type. Send an `Idempotency-Key` header to make a retry replay the first answer. File content and file names are never logged. In sandbox the file is checked and accepted but nothing is stored. Requires the `estamp.documents.write` scope. Rate limit: 30 requests per 60 seconds.",
         "tags": [
           "e-Stamp"
         ],
@@ -5678,7 +5682,7 @@
       "post": {
         "operationId": "setEstampStampPanCard",
         "summary": "Send or replace the payer's PAN card link",
-        "description": "Use it after `panCard.status` becomes FAILED or REJECTED, or to add a PAN to a stamp ordered without one. Processing is asynchronous: this answers 202 with PROCESSING and the result appears in `panCard` on the stamp. A new link replaces any earlier one. Advisory: a stamp ordered without a PAN is not held back. A link that is not an https link is a 400 (HTTPS_URL_REQUIRED, or INVALID_PAN_CARD_LINK when the issuing side refuses it); a stamp that has progressed too far, is fulfilled or cancelled is a 409. Requires the `estamp.orders.create` scope. Rate limit: 30 requests per 60 seconds.",
+        "description": "Use it after `panCard.status` becomes FAILED or REJECTED, or to add a PAN to a stamp ordered without one. Processing is asynchronous: this answers 202 with PROCESSING and the result appears in `panCard` on the stamp. A new link replaces any earlier one. A stamp can be ordered without a PAN, but it cannot be completed until one is on file. A link that is not an https link is a 400 (HTTPS_URL_REQUIRED, or INVALID_PAN_CARD_LINK when the issuing side refuses it); a stamp that has progressed too far, is fulfilled or cancelled is a 409. Requires the `estamp.orders.create` scope. Rate limit: 30 requests per 60 seconds.",
         "tags": [
           "e-Stamp"
         ],
@@ -5936,7 +5940,7 @@
       "get": {
         "operationId": "getAccountBalance",
         "summary": "Wallet balance and low-balance state",
-        "description": "Your wallet balance in rupees and paise, the low-balance threshold (Rs 500 by default), the state (OK, LOW_BALANCE, FINISHED), how many calls it covers at the cheapest approved price and at your 7-day average price, the last top-up and the signup credit still left. Any key with a verification scope can read its own organization's balance. A sandbox key gets a sandbox notice and zero amounts, never a real balance. Rate limit: 60 per minute per key. Amounts exclude GST.",
+        "description": "Your Service wallet balance in rupees and paise, the low-balance threshold (Rs 500 by default), the state (OK, LOW_BALANCE, FINISHED), how many calls it covers at the cheapest approved price and at your 7-day average price, the last top-up and the signup credit still left. Any key with a verification scope can read its own organization's balance. A sandbox key gets a sandbox notice and zero amounts, never a real balance. Rate limit: 60 per minute per key. Amounts exclude GST.",
         "tags": [
           "Usage & Logs"
         ],
@@ -9320,7 +9324,7 @@
                   },
                   "wallet": {
                     "type": "string",
-                    "description": "Which wallet cannot cover the order: STAMP_DUTY (the Stamp Duty Wallet) or SERVICE_FEE (the Service Fee Wallet). Absent when the shortfall wallet is not known.",
+                    "description": "Which wallet cannot cover the order: STAMP_DUTY (the Stamp Duty Wallet) or SERVICE_FEE (the Service wallet, the balance that pays for verification calls and e-Stamp service charges). Absent when the shortfall wallet is not known.",
                     "enum": [
                       "STAMP_DUTY",
                       "SERVICE_FEE"
@@ -10428,7 +10432,7 @@
           },
           "panCardImage": {
             "type": "string",
-            "description": "https link to the stamp-duty payer's PAN card (JPG, PNG, WebP, GIF, HEIC or PDF) on the default port, with no credentials, downloadable without a login. Optional and advisory: it never blocks an order. You can also send or replace it later with POST /v1/estamp/stamps/{stampId}/pan-card, or upload the file with POST /v1/estamp/orders/{orderId}/documents.",
+            "description": "https link to the stamp-duty payer's PAN card (JPG, PNG, WebP, GIF, HEIC or PDF) on the default port, with no credentials, downloadable without a login. You can place an order without it, but the PAN card is mandatory to complete the stamp: until one is on file the stamp waits. You can also send or replace it later with POST /v1/estamp/stamps/{stampId}/pan-card, or upload the file with POST /v1/estamp/orders/{orderId}/documents.",
             "format": "uri",
             "pattern": "^https://",
             "maxLength": 2048,
@@ -10715,7 +10719,7 @@
               "boolean",
               "null"
             ],
-            "description": "Whether the state asks for the payer's PAN card. Recommended, never blocking. null means not known."
+            "description": "Whether the state asks for the payer's PAN card. Whether the state asks for it; the order is accepted without it but the stamp cannot be completed until a PAN card is on file. null means not known."
           },
           "instrumentCount": {
             "type": "integer",
@@ -10981,7 +10985,7 @@
           },
           "serviceWalletDebitTotal": {
             "type": "number",
-            "description": "What the Service Fee Wallet is debited when the order is created (the service charges net of GST), in rupees."
+            "description": "What the Service wallet is debited when the order is created (the service charges net of GST), in rupees."
           }
         },
         "required": [
@@ -10990,7 +10994,7 @@
           "gstOnFee",
           "serviceWalletDebitTotal"
         ],
-        "description": "Priced totals in rupees. Never recalculate or override them. What the customer pays for the order is faceValueTotal + serviceFeeTotal + gstOnFee."
+        "description": "Priced totals in rupees. Never recalculate or override them. A sandbox key gets the same figures a live key would for the same lines. What the customer pays for the order is faceValueTotal + serviceFeeTotal + gstOnFee."
       },
       "EstampValidationIssue": {
         "type": "object",
@@ -11032,7 +11036,7 @@
           "required": {
             "type": "boolean",
             "const": false,
-            "description": "Always false: the payer's PAN card is advisory and an order is never held back for want of it."
+            "description": "Always false: an order is accepted without the payer's PAN card, but the stamp cannot be completed until one is on file."
           },
           "recommended": {
             "type": "boolean",
@@ -11472,7 +11476,7 @@
           "code",
           "message"
         ],
-        "description": "State of the payer's PAN card for one stamp. Advisory: a stamp without one is not held back. After FAILED or REJECTED, send a new link with POST /v1/estamp/stamps/{stampId}/pan-card."
+        "description": "State of the payer's PAN card for one stamp. A stamp without one is accepted but cannot be completed until a PAN card is on file. After FAILED or REJECTED, send a new link with POST /v1/estamp/stamps/{stampId}/pan-card."
       },
       "EstampStamp": {
         "type": "object",
@@ -11768,7 +11772,7 @@
           },
           "serviceFee": {
             "$ref": "#/components/schemas/EstampWalletPart",
-            "description": "The Service Fee Wallet."
+            "description": "Your Service wallet (the field name is kept for compatibility). The same balance pays for verification calls and for the service charges of an e-Stamp order."
           },
           "mode": {
             "type": "string",
@@ -11792,7 +11796,7 @@
           "mode",
           "simulated"
         ],
-        "description": "Both e-Stamp wallets in one read: the Stamp Duty Wallet and, under serviceFee, the Service Fee Wallet."
+        "description": "Both wallets in one read: the Stamp Duty Wallet and, under serviceFee, your Service wallet (the field name is kept for compatibility)."
       },
       "WalletBalance": {
         "type": "object",
@@ -12064,14 +12068,14 @@
           },
           "processingFeePercent": {
             "type": "string",
-            "description": "Always 0.00 for the Service Fee Wallet.",
+            "description": "Always 0.00 for the Service wallet.",
             "examples": [
               "0.00"
             ]
           },
           "processingFeeAmount": {
             "type": "string",
-            "description": "Always 0.00 for the Service Fee Wallet.",
+            "description": "Always 0.00 for the Service wallet.",
             "examples": [
               "0.00"
             ]
@@ -12133,7 +12137,7 @@
           "creditAmount",
           "totalCharged"
         ],
-        "description": "A Service Fee Wallet top-up: the Razorpay order to pay and the GST breakdown. A GST invoice is issued for the top-up. The wallet is credited automatically when the payment succeeds."
+        "description": "A Service wallet top-up (the route keeps its service-fee-wallet name for compatibility): the Razorpay order to pay and the GST breakdown. A GST invoice is issued for the top-up. The wallet is credited automatically when the payment succeeds."
       },
       "WalletTransaction": {
         "type": "object",
@@ -12304,7 +12308,7 @@
           "status",
           "paidAt"
         ],
-        "description": "A GST tax invoice for one Service Fee Wallet top-up."
+        "description": "A GST tax invoice for one Service wallet top-up."
       },
       "WalletInvoicesPage": {
         "type": "object",
@@ -12328,7 +12332,7 @@
           "items",
           "nextCursor"
         ],
-        "description": "One page of Service Fee Wallet top-up invoices. A sandbox top-up is fake credit and produces no invoice, so a sandbox key always gets an empty page."
+        "description": "One page of Service wallet top-up invoices. A sandbox top-up is fake credit and produces no invoice, so a sandbox key always gets an empty page."
       }
     },
     "parameters": {
