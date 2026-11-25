@@ -6,6 +6,23 @@ to [Semantic Versioning](https://semver.org/) (pre-1.0: minor versions may break
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-25
+
+Patch release: wording and documentation; no API or behaviour changes.
+
+### Changed
+
+- Documentation (README, examples, doc comments) now uses one customer-facing **Service wallet** (the one balance that pays
+  verification calls and e-Stamp fees; minimum top-up ₹1,000 plus 18% GST; GST on fees is paid at top-up, and orders debit the
+  fees before GST) alongside the **Stamp duty wallet**. `ServiceFeeWallet` and the `WalletServiceFee` / `WalletStampDuty` values
+  keep their names (kept for compatibility).
+- Documentation: an order can be placed without `PANCardImage`, but a PAN card is mandatory to complete the stamp. SDK
+  validation and the `PAN_CARD_RECOMMENDED` advisory are unchanged.
+- Documentation: e-Stamp pricing per paper (₹99 procurement + ₹5 API charge + convenience fee, by default 5% of the paper's
+  duty above ₹1,000; duty multiplied by quantity). Sandbox quotes use the same default rates as live. New accounts get no
+  signup credit.
+- README: the install line is `@v0.2.1`; the tag is created at release.
+
 ## [0.2.0] - 2026-11-24
 
 Tracks API contract 1.2.0 (62 operations, up from 31). Pre-1.0: this release contains breaking changes, listed under *Changed*.
@@ -46,6 +63,7 @@ Tracks API contract 1.2.0 (62 operations, up from 31). Pre-1.0: this release con
 - Bundled OpenAPI snapshot, a spec-coverage test, a conformance suite against the spec repo's mock server, runnable examples.
 - `baseURL` must be https (loopback http allowed) with no credentials; redirects are never followed; the API key and webhook secret are redacted from `fmt` output, errors and logs.
 
-[Unreleased]: https://github.com/Bani-Global-Industries-LLP/stampmitra-developer-go/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Bani-Global-Industries-LLP/stampmitra-developer-go/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/Bani-Global-Industries-LLP/stampmitra-developer-go/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Bani-Global-Industries-LLP/stampmitra-developer-go/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Bani-Global-Industries-LLP/stampmitra-developer-go/releases/tag/v0.1.0

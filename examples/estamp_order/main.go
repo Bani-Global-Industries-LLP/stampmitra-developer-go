@@ -3,8 +3,8 @@
 //
 //	STAMPMITRA_API_KEY=sk_test_... go run ./estamp_order [pan-card.pdf]
 //
-// Use a sandbox key: a live key debits your wallets. The PAN card is advisory, so the upload is
-// skipped when no file is given.
+// Use a sandbox key: a live key debits your wallets. An order can be placed without the PAN card
+// (so the upload is skipped when no file is given), but a PAN card is mandatory to complete the stamp.
 package main
 
 import (
@@ -57,7 +57,7 @@ func main() {
 		fmt.Printf("quote: duty %.2f + service fee %.2f + GST %.2f\n", v.Quote.FaceValueTotal, v.Quote.ServiceFeeTotal, v.Quote.GstOnFee)
 	}
 
-	// 2. Create: debits the wallets. The API requires an Idempotency-Key; derive it from your own
+	// 2. Create: debits the Stamp duty wallet (duty) and the Service wallet (fees, before GST). The API requires an Idempotency-Key; derive it from your own
 	//    reference so that re-running THIS program cannot create a second order.
 	created, err := client.Estamp.Orders.Create(ctx, order, stampmitra.WithIdempotencyKey("create-"+order.Reference))
 	if err != nil {
@@ -65,7 +65,7 @@ func main() {
 	}
 	fmt.Println("created", created.ID, created.Status)
 
-	// 3. Upload the payer's PAN card (optional and advisory).
+	// 3. Upload the payer's PAN card (not needed to place the order, mandatory to complete the stamp).
 	if len(os.Args) > 1 {
 		f, err := os.Open(os.Args[1])
 		if err != nil {

@@ -2,7 +2,7 @@
 // verification (PAN, GSTIN, vehicle RC, Voter ID, driving licence, passport, CIN, Udyam, bank
 // account) and e-Stamp Paper, plus orders, payment intents, usage, request logs and webhook events.
 //
-// The SDK is pre-1.0 (0.2.0): the API surface may change in minor releases, so pin your version.
+// The SDK is pre-1.0 (0.2.1): the API surface may change in minor releases, so pin your version.
 // It needs Go 1.21 or newer and uses only the standard library.
 //
 // # Quickstart

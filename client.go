@@ -31,7 +31,8 @@ type Client struct {
 	Services *ServicesService
 	Estamp   *EstampService
 	Account  *AccountService
-	// StampDutyWallet pays the government duty of e-Stamp orders; ServiceFeeWallet pays StampMitra's service charges.
+	// StampDutyWallet is the Stamp duty wallet (the statutory duty of e-Stamp orders). ServiceFeeWallet is the
+	// Service wallet (verification calls and e-Stamp fees); its name is kept for compatibility.
 	StampDutyWallet  *StampDutyWalletService
 	ServiceFeeWallet *ServiceFeeWalletService
 	Orders           *OrdersService
