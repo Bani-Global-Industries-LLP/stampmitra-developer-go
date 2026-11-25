@@ -196,8 +196,9 @@ func (s *EstampService) ListSROs(ctx context.Context, stateCode, districtCode st
 	return *out, nil
 }
 
-// GetWallet reads both e-Stamp wallets at once (GET /v1/estamp/wallet). The Stamp Duty Wallet is at
-// the top level and the Service Fee Wallet under ServiceFee. Needs both wallet read scopes.
+// GetWallet reads both wallets at once (GET /v1/estamp/wallet). The Stamp duty wallet is at the top
+// level and the Service wallet under ServiceFee (the name is kept for compatibility). Needs both
+// wallet read scopes.
 func (s *EstampService) GetWallet(ctx context.Context, opts ...RequestOption) (*EstampWallet, error) {
 	return call[EstampWallet](ctx, s.c, http.MethodGet, "/v1/estamp/wallet", nil, nil, false, opts)
 }
@@ -390,8 +391,8 @@ type EstampDocumentUploadParams struct {
 }
 
 // UploadDocument attaches the payer's PAN card to an order as multipart/form-data
-// (POST /v1/estamp/orders/{orderId}/documents). It is optional and advisory: an order is never held
-// back for want of it. Like Create it carries an auto-generated Idempotency-Key that is re-used on
+// (POST /v1/estamp/orders/{orderId}/documents). An order can be placed without it, but a PAN card
+// is mandatory to complete the stamp. Like Create it carries an auto-generated Idempotency-Key that is re-used on
 // retries; the whole body is re-sent unchanged.
 func (s *EstampOrdersService) UploadDocument(ctx context.Context, orderID string, p *EstampDocumentUploadParams, opts ...RequestOption) (*EstampDocument, error) {
 	seg, err := validatePathID("orderId", orderID)
@@ -496,8 +497,8 @@ func (s *EstampStampsService) Replace(ctx context.Context, stampID string, opts 
 }
 
 // SetPANCard sends or replaces the payer's PAN card link (POST /v1/estamp/stamps/{stampId}/pan-card).
-// The API answers 202 and checks the card afterwards: read PANCard.Status from Get. Advisory, and
-// never retried automatically.
+// The API answers 202 and checks the card afterwards: read PANCard.Status from Get. A PAN card is
+// mandatory to complete the stamp. Never retried automatically.
 func (s *EstampStampsService) SetPANCard(ctx context.Context, stampID string, p *EstampPANCardParams, opts ...RequestOption) (*EstampPANCardResult, error) {
 	seg, err := validatePathID("stampId", stampID)
 	if err != nil {
@@ -580,8 +581,8 @@ func walletIter[T any](p *WalletListParams, list func(ctx context.Context, p *Wa
 	}}
 }
 
-// StampDutyWalletService reads and tops up the Stamp Duty Wallet (/v1/stamp-duty-wallet), which
-// pays the government duty of an order.
+// StampDutyWalletService reads and tops up the Stamp duty wallet (/v1/stamp-duty-wallet), which
+// pays the statutory stamp duty of an order.
 type StampDutyWalletService struct{ c *Client }
 
 // GetBalance returns the wallet balance as a decimal string (GET /v1/stamp-duty-wallet).
@@ -643,8 +644,10 @@ func (s *StampDutyWalletService) GetInvoice(ctx context.Context, id string, opts
 	return call[StampDutyWalletInvoice](ctx, s.c, http.MethodGet, "/v1/stamp-duty-wallet/invoices/"+seg, nil, nil, false, opts)
 }
 
-// ServiceFeeWalletService reads and tops up the Service Fee Wallet (/v1/service-fee-wallet), which
-// pays StampMitra's service charges.
+// ServiceFeeWalletService reads and tops up the Service wallet (/v1/service-fee-wallet; the name is
+// kept for compatibility). It is one balance that pays verification calls and the e-Stamp fees. The
+// minimum top-up is Rs 1,000 plus 18% GST; GST on fees is paid at top-up, so orders debit the fees
+// before GST.
 type ServiceFeeWalletService struct{ c *Client }
 
 // GetBalance returns the wallet balance as a decimal string (GET /v1/service-fee-wallet).
@@ -708,7 +711,7 @@ func (s *ServiceFeeWalletService) GetInvoice(ctx context.Context, id string, opt
 // AccountService reads the balance and usage of the organization that owns the key (/v1/account).
 type AccountService struct{ c *Client }
 
-// GetBalance returns the wallet balance and low-balance state (GET /v1/account/balance).
+// GetBalance returns the Service wallet balance and low-balance state (GET /v1/account/balance).
 func (s *AccountService) GetBalance(ctx context.Context, opts ...RequestOption) (*AccountBalance, error) {
 	return call[AccountBalance](ctx, s.c, http.MethodGet, "/v1/account/balance", nil, nil, false, opts)
 }

@@ -5,21 +5,24 @@
 [![Go version](https://img.shields.io/badge/go-1.21%2B-00ADD8)](go.mod)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-> The pkg.go.dev badge shows documentation only once the first version tag (v0.2.0) is published.
+> The pkg.go.dev badge shows documentation only once a version tag is published. The `v0.2.1` tag is created at release, so
+> the `go get` line below works only after the release.
 
 Official Go client for the [StampMitra Developer API](https://developer.stampmitra.in/docs):
 Indian identity verification (PAN, GSTIN, vehicle RC, Voter ID, driving licence, passport, CIN, Udyam, bank account)
 and e-Stamp Paper. OpenAPI spec: <https://developer.stampmitra.in/openapi.json>.
 
-> **Status: pre-1.0 (0.2.0).** The API surface may change in minor releases. Pin your version.
+> **Status: pre-1.0 (0.2.1).** The API surface may change in minor releases. Pin your version.
 
 SDK guide: <https://developer.stampmitra.in/sdks/go> | API docs: <https://developer.stampmitra.in/docs>
 
 ## Install
 
 ```bash
-go get github.com/Bani-Global-Industries-LLP/stampmitra-developer-go@v0.2.0
+go get github.com/Bani-Global-Industries-LLP/stampmitra-developer-go@v0.2.1
 ```
+
+The `v0.2.1` tag is created at release: until then this line does not resolve.
 
 Requires Go 1.21 or newer (CI runs 1.21, 1.22, 1.23 and 1.24). No third-party dependencies: the standard library only.
 
@@ -87,7 +90,7 @@ Every method takes a `context.Context` first and accepts per-call options last: 
 | `client.Estamp` | `GetSchema`, `ListStates`, `GetStatesAvailability`, `GetState`, `GetStateRequirements`, `ListDistricts`, `ListSROs`, `ListInstruments`, `ListArticles`, `CalculateDuty`, `AddParties`, `GetWallet` |
 | `client.Estamp.Orders` | `Validate`, `Create`, `List`, `ListAll` (iterator), `Get`, `Cancel`, `Export`, `ListStamps`, `UploadDocument` |
 | `client.Estamp.Stamps` | `Get`, `Cancel`, `Replace`, `SetPANCard`, `GetCertificate` |
-| `client.StampDutyWallet`, `client.ServiceFeeWallet` | `GetBalance`, `Topup`, `ListTransactions`, `ListAllTransactions`, `ListInvoices`, `ListAllInvoices`, `GetInvoice` |
+| `client.StampDutyWallet` (Stamp duty wallet), `client.ServiceFeeWallet` (Service wallet; name kept for compatibility) | `GetBalance`, `Topup`, `ListTransactions`, `ListAllTransactions`, `ListInvoices`, `ListAllInvoices`, `GetInvoice` |
 | `client.Account` | `GetBalance`, `GetUsage` |
 | `client.Orders` | `Create`, `Get`, `GetStatus`, `GetPayment`, `ListDocuments`, `GetDocumentDownload` |
 | `client.Payments.Intents` | `Create`, `Get` |
@@ -172,7 +175,7 @@ if err == nil && !check.Valid {
 	log.Println("missing details:", check.Errors)
 }
 
-// 2. Create: debits both wallets. An Idempotency-Key is required by the API; when you pass none the SDK
+// 2. Create: debits the Stamp duty wallet (duty) and the Service wallet (fees, before GST). An Idempotency-Key is required by the API; when you pass none the SDK
 //    generates one and re-uses it on every automatic retry. Derive it from your own reference if your program may re-run.
 created, err := client.Estamp.Orders.Create(ctx, order, stampmitra.WithIdempotencyKey("create-order-2026-0917"))
 
@@ -191,7 +194,8 @@ if err == nil && cert.Available {
 }
 ```
 
-- The **PAN card is advisory**: an order is never held back for want of one. Send `PANCardImage` (an `https` link) on a stamp line,
+- The **PAN card**: you can place an order without one, but a PAN card is **mandatory to complete the stamp** (the SDK's validation is
+  unchanged; the API may flag a missing card with the `PAN_CARD_RECOMMENDED` advisory). Send `PANCardImage` (an `https` link) on a stamp line,
   upload the file as above, or send or replace a link later with `Estamp.Stamps.SetPANCard` (the API answers 202 and checks the card
   afterwards: read `PANCard.Status` from `Stamps.Get`).
 - `FirstParty` and `SecondParty` are a `Party`: `PartyName("Jane Doe")` is sent as a string, `PartyDetails(EstampParty{...})` as an object
@@ -199,7 +203,7 @@ if err == nil && cert.Available {
   `PropertyArea` is `&EstampPropertyArea{Unit: stampmitra.AreaSquareFeet, Value: 850}`.
 - `Cancel` (order and stamp), `Replace`, `SetPANCard` and the wallet top-ups are never retried automatically; see below.
 - A rejected body is a 400 `*APIError` whose `FieldErrors` list every finding (`Field`, `Code`, `Message`, `Index`); a 402 names the short
-  wallet in `Wallet` (`stampmitra.WalletStampDuty` or `stampmitra.WalletServiceFee`). Top that wallet up and send a new request.
+  wallet in `Wallet` (`stampmitra.WalletStampDuty` for the Stamp duty wallet or `stampmitra.WalletServiceFee` for the Service wallet). Top that wallet up and send a new request.
 
 ```go
 var order *stampmitra.EstampOrderParams // built as above
@@ -217,8 +221,15 @@ if errors.As(err, &apiErr) {
 
 ### Wallets
 
-Orders are paid from two prepaid wallets: the **Stamp Duty Wallet** (the government duty) and the **Service Fee Wallet**
-(StampMitra's service charges). Balances are decimal strings.
+Two prepaid wallets back your account:
+
+- The **Service wallet** is one balance. It pays verification calls and the e-Stamp fees (procurement charge, API charge and
+  convenience fee). Top it up by at least ₹1,000 plus 18% GST. GST on fees is paid at top-up, so an order debits the fees before GST.
+- The **Stamp duty wallet** holds the statutory stamp duty that orders debit.
+
+The Service wallet is `client.ServiceFeeWallet` (the name is kept for compatibility) and the Stamp duty wallet is
+`client.StampDutyWallet`. In API responses and errors the wallet names stay `SERVICE_FEE` and `STAMP_DUTY` (for example
+`details.wallet`). There is no signup credit for new accounts. Balances are decimal strings.
 
 ```go
 sd, err := client.StampDutyWallet.GetBalance(ctx)
@@ -228,11 +239,11 @@ invoices, err := client.StampDutyWallet.ListInvoices(ctx, nil)
 both, err := client.Estamp.GetWallet(ctx) // both wallets in one read
 ```
 
-A Stamp Duty top-up adds a **6% processing fee plus 18% GST on that fee** on top of `BaseAmount`; the wallet is credited the amount
+A Stamp duty wallet top-up adds a **6% processing fee plus 18% GST on that fee** on top of `BaseAmount`; the wallet is credited the amount
 you added (`CreditAmount`, equal to `BaseAmount`), and stamp duty itself carries no GST. A GST tax invoice for the fee is available
 from `ListInvoices` / `GetInvoice` (the invoice id is the top-up's `TopupID`). Show your payer the figures the response returns
 (`ProcessingFeeAmount`, `GstAmount`, `TotalCharged`): the SDK never computes fees, because the rate can change. In that response
-`BaseAmount`, `GstAmount` and `TotalCharged` are JSON numbers (`float64`) and the other amounts are strings. A Service Fee top-up
+`BaseAmount`, `GstAmount` and `TotalCharged` are JSON numbers (`float64`) and the other amounts are strings. A Service wallet top-up
 returns every amount as a string. Both top-ups return a payment order to complete in checkout (live keys); a sandbox top-up adds
 fake credit at once.
 
@@ -380,7 +391,7 @@ identifiers (PAN, GSTIN, account numbers, ...) and personal data (names, dates o
 
 ## Pricing
 
-The SDK is free and MIT-licensed. You pay only for successful API calls, from one prepaid wallet. Sandbox is free: mock data on every endpoint, and it never debits your wallet.
+The SDK is free and MIT-licensed. You pay only for successful API calls, from your prepaid Service wallet. There is no signup credit. Sandbox is free: mock data on every endpoint, and it never debits your Service wallet.
 
 Per-call rates by plan, in rupees, excluding 18% GST:
 
@@ -400,7 +411,7 @@ Per-call rates by plan, in rupees, excluding 18% GST:
 | IP allowlisting | No | No | Yes | Yes | Yes | Yes |
 | White-label and custom domain | No | No | No | Yes | No | Yes |
 
-Growth and Scale are also available yearly (₹9,990 and ₹49,990, two months free). There are separate Startup and NGO programmes. Plans, rates and limits can change, and [developer.stampmitra.in/pricing](https://developer.stampmitra.in/pricing) is the source of truth; see it for how an e-Stamp order is priced in total. API e-Stamp orders are charged per paper as a procurement charge plus an API charge (ex-GST); see the pricing page for current rates.
+Growth and Scale are also available yearly (₹9,990 and ₹49,990, two months free). There are separate Startup and NGO programmes. Plans, rates and limits can change, and [developer.stampmitra.in/pricing](https://developer.stampmitra.in/pricing) is the source of truth; see it for how an e-Stamp order is priced in total. API e-Stamp orders are priced per paper: ₹99 procurement charge, plus ₹5 API charge, plus a convenience fee (by default 5% of that paper's duty above ₹1,000). The duty is multiplied by the quantity. Sandbox quotes use the same default rates as live; rates agreed for your account are not applied in sandbox. The fees are debited from the Service wallet before GST (GST was paid when you topped up), and the duty from the Stamp duty wallet. See the pricing page for current rates.
 
 ## Security
 

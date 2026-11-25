@@ -704,12 +704,12 @@ func TestOrderAndWalletIterators(t *testing.T) {
 }
 
 func TestVersionAndUserAgent(t *testing.T) {
-	if Version != "0.2.0" {
+	if Version != "0.2.1" {
 		t.Fatalf("Version = %q", Version)
 	}
 	env := newEnv(t, func(n int, w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, `{}`) })
 	_, _ = env.c.Account.GetBalance(context.Background())
-	if ua := env.rec.all()[0].Header.Get("User-Agent"); !strings.HasPrefix(ua, "stampmitra-go/0.2.0 ") {
+	if ua := env.rec.all()[0].Header.Get("User-Agent"); !strings.HasPrefix(ua, "stampmitra-go/0.2.1 ") {
 		t.Errorf("User-Agent = %q", ua)
 	}
 }
